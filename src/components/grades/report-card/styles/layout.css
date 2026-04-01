@@ -1,0 +1,50 @@
+/* Format A4 et impression */
+@page {
+  size: A4;
+  margin: 0;
+}
+
+@media print {
+  html, body {
+    width: 210mm;
+    height: 297mm;
+    margin: 0;
+    padding: 0;
+  }
+  
+  .report-card {
+    box-shadow: none !important;
+  }
+  
+  .no-print {
+    display: none !important;
+  }
+}
+
+.report-card {
+  width: 210mm;
+  min-height: 297mm;
+  margin: 0 auto;
+  background: white;
+  box-shadow: var(--shadow-lg);
+  position: relative;
+  overflow: hidden;
+}
+
+.report-content {
+  padding: var(--spacing-xl);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
+/* Grille moderne */
+.grid-container {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: var(--spacing-md);
+}
+
+.col-span-8 { grid-column: span 8; }
+.col-span-4 { grid-column: span 4; }

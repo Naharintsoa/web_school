@@ -1,0 +1,85 @@
+/**
+ * Utilitaires de calcul des notes.
+ * La règle fondamentale : une matière sans note saisie ne compte pas dans la moyenne.
+ */
+import type { Grade } from '../types';
+
+/**
+ * Calcule la moyenne pondérée.
+ * IMPORTANT : seules les matières avec une note saisie (score défini) sont incluses.
+ * Une matière non notée n'affecte pas la moyenne.
+ *
+ * @param grades - Liste des notes (uniquement celles effectivement saisies)
+ */
+export function calculateAverage(grades: Grade[]): number {
+  // Ne garder que les notes réellement saisies (score défini et valide)
+  const entered = grades.filter(g =>
+    g.score !== undefined &&
+    g.score !== null &&
+    !isNaN(g.score)
+  );
+
+  if (entered.length === 0) return 0;
+
+  const totalWeighted = entered.reduce((sum, g) => sum + g.score * g.coefficient, 0);
+  const totalCoeff    = entered.reduce((sum, g) => sum + g.coefficient, 0);
+
+  return totalCoeff === 0 ? 0 : totalWeighted / totalCoeff;
+}
+
+/**
+ * Calcule les statistiques d'une classe pour une matière donnée.
+ * Retourne moyenne, note minimale et maximale.
+ *
+ * @param gradesList - Toutes les notes de la classe pour cette matière
+ */
+export function calculateClassStats(gradesList: Grade[]): {
+  avg: number;
+  min: number;
+  max: number;
+} {
+  const scores = gradesList
+    .filter(g => g.score !== undefined && g.score !== null && !isNaN(g.score))
+    .map(g => g.score);
+
+  if (scores.length === 0) return { avg: 0, min: 0, max: 0 };
+
+  const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
+  return {
+    avg,
+    min: Math.min(...scores),
+    max: Math.max(...scores),
+  };
+}
+
+/**
+ * Retourne le niveau lettre basé sur le score (barème français sur 20).
+ */
+export function getGradeLevel(score: number): string {
+  if (score >= 18) return 'A+';
+  if (score >= 16) return 'A';
+  if (score >= 14) return 'B+';
+  if (score >= 12) return 'B';
+  if (score >= 10) return 'C';
+  if (score >= 8)  return 'D';
+  return 'E';
+}
+
+/**
+ * Retourne l'appréciation par défaut selon le score.
+ */
+export function getDefaultAppreciation(score: number): string {
+  if (score >= 18) return 'Excellent';
+  if (score >= 16) return 'Très bien';
+  if (score >= 14) return 'Bien';
+  if (score >= 12) return 'Assez bien';
+  if (score >= 10) return 'Passable';
+  return 'Insuffisant';
+}
+
+/**
+ * Formate un score pour l'affichage (2 décimales).
+ */
+export function formatScore(score: number): string {
+  return score.toFixed(2);
+}

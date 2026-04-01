@@ -1,0 +1,55 @@
+/* Styles spécifiques à l'impression */
+@media print {
+  /* Force le format A4 */
+  @page {
+    size: A4;
+    margin: 1cm; /* Ajuster selon vos besoins */
+  }
+
+  /* Corps de la page */
+  body {
+    font-size: 12px;
+    margin: 0;
+    padding: 0;
+    line-height: 1.5;
+    -webkit-print-color-adjust: exact; /* Imprime les couleurs exactes */
+  }
+
+  /* Tableau */
+  .grades-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11px; /* Taille de police pour un tableau compact */
+  }
+
+  .grades-table th, .grades-table td {
+    border: 1px solid black;
+    padding: 6px; /* Réduit l'espacement pour une meilleure utilisation de l'espace */
+  }
+
+  .average-row {
+    background-color: #f0f0f0;
+    -webkit-print-color-adjust: exact; /* Assure que les couleurs de fond soient imprimées */
+  }
+
+  /* Masquer les éléments inutiles à l'impression */
+  .no-print {
+    display: none !important;
+  }
+
+  /* Forcer le tableau à ne pas être coupé sur plusieurs pages */
+  table {
+    page-break-inside: auto;
+  }
+
+  tr {
+    page-break-inside: avoid;
+    page-break-after: auto;
+  }
+
+  /* Réduction des marges pour maximiser l'utilisation de l'espace */
+  h1, h2, h3, p {
+    margin: 0;
+    padding: 0;
+  }
+}

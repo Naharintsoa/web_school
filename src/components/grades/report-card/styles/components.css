@@ -1,0 +1,103 @@
+/* En-tête */
+.header {
+  background: var(--gradient-header);
+  padding: var(--spacing-lg);
+  border-bottom: 2px solid var(--primary);
+  position: relative;
+  overflow: hidden;
+}
+
+.header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 200px;
+  height: 200px;
+  background: var(--gradient-primary);
+  opacity: 0.1;
+  border-radius: 50%;
+  transform: translate(50%, -50%);
+}
+
+.school-info {
+  position: relative;
+  z-index: 1;
+}
+
+/* Carte d'information */
+.info-card {
+  background: white;
+  border-radius: 8px;
+  padding: var(--spacing-lg);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid #e2e8f0;
+}
+
+/* Tableau des notes */
+.grades-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+.grades-table th {
+  background: var(--gradient-header);
+  padding: var(--spacing-md);
+  font-weight: 600;
+  text-align: left;
+  border-bottom: 2px solid var(--primary);
+}
+
+.grades-table td {
+  padding: var(--spacing-md);
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.grades-table tr:last-child td {
+  border-bottom: none;
+}
+
+/* Badge de niveau */
+.level-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  font-weight: 600;
+  font-size: 12px;
+  color: white;
+}
+
+.level-A { background: var(--primary); }
+.level-B { background: var(--accent); }
+.level-C { background: var(--secondary); }
+
+/* Signature et mentions */
+.signature-section {
+  margin-top: auto;
+  padding-top: var(--spacing-lg);
+  border-top: 1px solid #e2e8f0;
+}
+
+.mention-radio {
+  display: flex;
+  gap: var(--spacing-md);
+}
+
+.mention-item {
+  position: relative;
+  padding-left: 24px;
+}
+
+.mention-item input[type="radio"] {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+}

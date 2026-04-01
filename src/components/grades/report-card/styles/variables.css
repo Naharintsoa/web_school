@@ -1,0 +1,28 @@
+:root {
+  /* Couleurs */
+  --primary: #2563eb;
+  --primary-light: #3b82f6;
+  --primary-dark: #1d4ed8;
+  --secondary: #64748b;
+  --accent: #f59e0b;
+  
+  /* Dégradés */
+  --gradient-primary: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+  --gradient-header: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+  
+  /* Ombres */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+  
+  /* Espacements */
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+  
+  /* Typographie */
+  --font-sans: ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-serif: ui-serif, Georgia, Cambria, serif;
+}
