@@ -1,139 +1,33 @@
 /**
  * Service d'authentification — Collège Sully
  *
- * - Hachage SHA-256 des mots de passe (Web Crypto API)
- * - Gestion des utilisateurs et rôles (localStorage)
- * - Session stockée en sessionStorage (expire à la fermeture du navigateur)
- * - Compte super_admin protégé : ne peut être supprimé ni désactivé
+ * Toutes les opérations passent par l'API Express.
+ * La session est gérée via cookie httpOnly (JWT).
  */
-import { STORAGE_KEYS } from './storage/constants';
+import { apiFetch } from './api/client';
 import type { AppUser, AppRole, AuthSession, Permission } from '../types/auth';
-import { DEFAULT_ROLES, ALL_PERMISSIONS } from '../types/auth';
-
-// ─── Salt applicatif (côté client, pas de secret serveur) ─────────────────────
-const APP_SALT = 'college-sully-2024-secure-salt';
-
-// ─── Identifiants du super admin (par défaut) ─────────────────────────────────
-const SUPER_ADMIN_USERNAME = 'admin';
-const SUPER_ADMIN_DEFAULT_PASSWORD = 'Admin@Sully2024';
-const SUPER_ADMIN_ID = 'super-admin-fixed-id';
-
-// ─── Utilitaires cryptographiques ─────────────────────────────────────────────
-
-/** SHA-256 du mot de passe + salt */
-export async function hashPassword(password: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(password + APP_SALT);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  return Array.from(new Uint8Array(hashBuffer))
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('');
-}
-
-// ─── Stockage ─────────────────────────────────────────────────────────────────
-
-function loadUsers(): AppUser[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEYS.USERS);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveUsers(users: AppUser[]): void {
-  localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
-}
-
-function loadRoles(): AppRole[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEYS.ROLES);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveRoles(roles: AppRole[]): void {
-  localStorage.setItem(STORAGE_KEYS.ROLES, JSON.stringify(roles));
-}
+import { ALL_PERMISSIONS } from '../types/auth';
 
 // ─── Initialisation ───────────────────────────────────────────────────────────
 
 /**
  * À appeler au démarrage de l'app.
- * Crée les rôles par défaut et le super admin s'ils n'existent pas.
+ * Tente de récupérer la session courante depuis le cookie.
+ * Retourne la session ou null si non connecté.
  */
-export async function initializeAuth(): Promise<void> {
-  // Initialiser les rôles par défaut si absents
-  const roles = loadRoles();
-  if (roles.length === 0) {
-    saveRoles(DEFAULT_ROLES);
-  } else {
-    // Synchroniser les rôles système (mettre à jour les permissions si nécessaire)
-    const updated = roles.map(r => {
-      const def = DEFAULT_ROLES.find(d => d.id === r.id);
-      return def && def.isSystem ? { ...r, permissions: def.permissions, isSystem: true } : r;
-    });
-    // Ajouter les nouveaux rôles par défaut manquants
-    DEFAULT_ROLES.forEach(def => {
-      if (!updated.find(u => u.id === def.id)) {
-        updated.push(def);
-      }
-    });
-    saveRoles(updated);
-  }
-
-  // Créer le super admin si absent
-  const users = loadUsers();
-  if (!users.find(u => u.isSuperAdmin)) {
-    const hash = await hashPassword(SUPER_ADMIN_DEFAULT_PASSWORD);
-    const superAdmin: AppUser = {
-      id: SUPER_ADMIN_ID,
-      username: SUPER_ADMIN_USERNAME,
-      fullName: 'Administrateur Principal',
-      email: 'admin@college-sully.mg',
-      passwordHash: hash,
-      roleId: 'super_admin',
-      isActive: true,
-      isSuperAdmin: true,
-      createdAt: new Date().toISOString(),
-    };
-    users.push(superAdmin);
-    saveUsers(users);
-  }
-}
-
-// ─── Session ──────────────────────────────────────────────────────────────────
-
-function buildSession(user: AppUser, role: AppRole): AuthSession {
-  return {
-    userId: user.id,
-    username: user.username,
-    fullName: user.fullName,
-    roleId: role.id,
-    roleLabel: role.label,
-    permissions: role.permissions,
-    isSuperAdmin: user.isSuperAdmin,
-    loginAt: Date.now(),
-  };
-}
-
-function saveSession(session: AuthSession): void {
-  sessionStorage.setItem(STORAGE_KEYS.AUTH_SESSION, JSON.stringify(session));
-}
-
-export function getSession(): AuthSession | null {
+export async function initializeAuth(): Promise<AuthSession | null> {
   try {
-    const raw = sessionStorage.getItem(STORAGE_KEYS.AUTH_SESSION);
-    return raw ? JSON.parse(raw) : null;
+    return await apiFetch<AuthSession>('/auth/me');
   } catch {
     return null;
   }
 }
 
-export function clearSession(): void {
-  sessionStorage.removeItem(STORAGE_KEYS.AUTH_SESSION);
+// ─── Session ──────────────────────────────────────────────────────────────────
+
+/** La session est gérée côté serveur via cookie. Retourne toujours null. */
+export function getSession(): AuthSession | null {
+  return null;
 }
 
 // ─── Authentification ─────────────────────────────────────────────────────────
@@ -143,38 +37,28 @@ export async function loginUser(
   username: string,
   password: string
 ): Promise<AuthSession | null> {
-  const users = loadUsers();
-  const user = users.find(
-    u => u.username.toLowerCase() === username.toLowerCase() && u.isActive
-  );
-  if (!user) return null;
-
-  const hash = await hashPassword(password);
-  if (hash !== user.passwordHash) return null;
-
-  const roles = loadRoles();
-  const role = roles.find(r => r.id === user.roleId);
-  if (!role) return null;
-
-  // Mettre à jour lastLoginAt
-  const updated = users.map(u =>
-    u.id === user.id ? { ...u, lastLoginAt: new Date().toISOString() } : u
-  );
-  saveUsers(updated);
-
-  const session = buildSession(user, role);
-  saveSession(session);
-  return session;
+  try {
+    return await apiFetch<AuthSession>('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ username, password }),
+    });
+  } catch {
+    return null;
+  }
 }
 
-export function logoutUser(): void {
-  clearSession();
+export async function logoutUser(): Promise<void> {
+  try {
+    await apiFetch<void>('/auth/logout', { method: 'POST' });
+  } catch {
+    // Ignorer l'erreur — le cookie sera quand même effacé côté serveur
+  }
 }
 
 // ─── Gestion des utilisateurs (admin:users requis) ────────────────────────────
 
-export function getUsers(): AppUser[] {
-  return loadUsers();
+export async function getUsers(): Promise<AppUser[]> {
+  return apiFetch<AppUser[]>('/users');
 }
 
 export async function createUser(data: {
@@ -184,26 +68,10 @@ export async function createUser(data: {
   password: string;
   roleId: string;
 }): Promise<AppUser> {
-  const users = loadUsers();
-
-  if (users.find(u => u.username.toLowerCase() === data.username.toLowerCase())) {
-    throw new Error("Ce nom d'utilisateur est déjà utilisé.");
-  }
-
-  const hash = await hashPassword(data.password);
-  const user: AppUser = {
-    id: `user-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    username: data.username,
-    fullName: data.fullName,
-    email: data.email,
-    passwordHash: hash,
-    roleId: data.roleId,
-    isActive: true,
-    isSuperAdmin: false,
-    createdAt: new Date().toISOString(),
-  };
-  saveUsers([...users, user]);
-  return user;
+  return apiFetch<AppUser>('/users', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
 }
 
 export async function updateUser(
@@ -216,111 +84,49 @@ export async function updateUser(
     newPassword?: string;
   }
 ): Promise<AppUser> {
-  const users = loadUsers();
-  const idx = users.findIndex(u => u.id === id);
-  if (idx === -1) throw new Error('Utilisateur introuvable.');
-
-  const user = users[idx];
-  if (user.isSuperAdmin && data.isActive === false) {
-    throw new Error('Le super administrateur ne peut pas être désactivé.');
-  }
-  if (user.isSuperAdmin && data.roleId && data.roleId !== 'super_admin') {
-    throw new Error('Le rôle du super administrateur ne peut pas être modifié.');
-  }
-
-  const updated: AppUser = {
-    ...user,
-    fullName: data.fullName ?? user.fullName,
-    email: data.email ?? user.email,
-    roleId: data.roleId ?? user.roleId,
-    isActive: data.isActive !== undefined ? data.isActive : user.isActive,
-    passwordHash: data.newPassword
-      ? await hashPassword(data.newPassword)
-      : user.passwordHash,
-  };
-
-  users[idx] = updated;
-  saveUsers(users);
-  return updated;
+  return apiFetch<AppUser>(`/users/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
 }
 
-export function deleteUser(id: string): void {
-  const users = loadUsers();
-  const user = users.find(u => u.id === id);
-  if (!user) throw new Error('Utilisateur introuvable.');
-  if (user.isSuperAdmin) throw new Error('Le super administrateur ne peut pas être supprimé.');
-  saveUsers(users.filter(u => u.id !== id));
+export async function deleteUser(id: string): Promise<void> {
+  return apiFetch<void>(`/users/${id}`, { method: 'DELETE' });
 }
 
-export function toggleUserActive(id: string): void {
-  const users = loadUsers();
-  const user = users.find(u => u.id === id);
-  if (!user) throw new Error('Utilisateur introuvable.');
-  if (user.isSuperAdmin) throw new Error('Le super administrateur ne peut pas être désactivé.');
-  saveUsers(users.map(u => u.id === id ? { ...u, isActive: !u.isActive } : u));
+export async function toggleUserActive(id: string): Promise<AppUser> {
+  return apiFetch<AppUser>(`/users/${id}/toggle`, { method: 'PATCH' });
 }
 
 // ─── Gestion des rôles (admin:roles requis) ───────────────────────────────────
 
-export function getRoles(): AppRole[] {
-  return loadRoles();
+export async function getRoles(): Promise<AppRole[]> {
+  return apiFetch<AppRole[]>('/roles');
 }
 
-export function createRole(data: {
+export async function createRole(data: {
   name: string;
   label: string;
   permissions: Permission[];
-}): AppRole {
-  const roles = loadRoles();
-  if (roles.find(r => r.name.toLowerCase() === data.name.toLowerCase())) {
-    throw new Error('Un rôle avec ce nom existe déjà.');
-  }
-  const role: AppRole = {
-    id: `role-${Date.now()}`,
-    name: data.name.toLowerCase().replace(/\s+/g, '_'),
-    label: data.label,
-    permissions: data.permissions,
-    isSystem: false,
-  };
-  saveRoles([...roles, role]);
-  return role;
+}): Promise<AppRole> {
+  return apiFetch<AppRole>('/roles', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
 }
 
-export function updateRole(
+export async function updateRole(
   id: string,
   data: { label?: string; permissions?: Permission[] }
-): AppRole {
-  const roles = loadRoles();
-  const idx = roles.findIndex(r => r.id === id);
-  if (idx === -1) throw new Error('Rôle introuvable.');
-
-  const role = roles[idx];
-  // Le rôle super_admin ne peut pas être modifié
-  if (role.id === 'super_admin') {
-    throw new Error('Le rôle super administrateur ne peut pas être modifié.');
-  }
-
-  const updated: AppRole = {
-    ...role,
-    label: data.label ?? role.label,
-    permissions: data.permissions ?? role.permissions,
-  };
-  roles[idx] = updated;
-  saveRoles(roles);
-  return updated;
+): Promise<AppRole> {
+  return apiFetch<AppRole>(`/roles/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
 }
 
-export function deleteRole(id: string): void {
-  const roles = loadRoles();
-  const role = roles.find(r => r.id === id);
-  if (!role) throw new Error('Rôle introuvable.');
-  if (role.isSystem) throw new Error('Les rôles système ne peuvent pas être supprimés.');
-
-  const users = loadUsers();
-  if (users.some(u => u.roleId === id)) {
-    throw new Error('Ce rôle est utilisé par des utilisateurs. Veuillez les réassigner avant de supprimer.');
-  }
-  saveRoles(roles.filter(r => r.id !== id));
+export async function deleteRole(id: string): Promise<void> {
+  return apiFetch<void>(`/roles/${id}`, { method: 'DELETE' });
 }
 
 // ─── Vérification des permissions ────────────────────────────────────────────

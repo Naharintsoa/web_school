@@ -1,14 +1,14 @@
 /**
  * AuthContext — fournit la session, les fonctions login/logout
  * et la vérification de permissions à toute l'application.
+ * La session est restaurée depuis le cookie JWT via GET /api/auth/me.
  */
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import type { AuthSession, Permission } from '../types/auth';
+import { apiFetch } from '../services/api/client';
 import {
-  initializeAuth,
   loginUser,
   logoutUser,
-  getSession,
   hasPermission as checkPerm,
   hasAnyPermission as checkAnyPerm,
 } from '../services/authService';
@@ -29,14 +29,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    (async () => {
-      // Initialiser les rôles par défaut + super admin si première utilisation
-      await initializeAuth();
-      // Restaurer la session courante (sessionStorage)
-      const existing = getSession();
-      setSession(existing);
-      setLoading(false);
-    })();
+    // Restaurer la session depuis le cookie httpOnly via GET /api/auth/me
+    apiFetch<AuthSession>('/auth/me')
+      .then(s => setSession(s))
+      .catch(() => setSession(null))
+      .finally(() => setLoading(false));
   }, []);
 
   const login = useCallback(async (username: string, password: string): Promise<boolean> => {
@@ -48,8 +45,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return false;
   }, []);
 
-  const logout = useCallback(() => {
-    logoutUser();
+  const logout = useCallback(async () => {
+    await logoutUser();
     setSession(null);
   }, []);
 
