@@ -2,7 +2,7 @@
  * Utilitaires de calcul des notes.
  * La règle fondamentale : une matière sans note saisie ne compte pas dans la moyenne.
  */
-import type { Grade } from '../types';
+import type { Grade } from '../types/grade';
 
 /**
  * Calcule la moyenne pondérée.
@@ -75,6 +75,21 @@ export function getDefaultAppreciation(score: number): string {
   if (score >= 12) return 'Assez bien';
   if (score >= 10) return 'Passable';
   return 'Insuffisant';
+}
+
+/**
+ * Retourne la mention du bulletin selon la moyenne générale (barème /20).
+ *   ≥ 16  → félicitations
+ *   ≥ 14  → encouragements
+ *   ≥ 10  → progresse
+ *    < 10  → insuffisant
+ */
+export function getMentionFromAverage(average: number): 'félicitations' | 'encouragements' | 'progresse' | 'insuffisant' | '' {
+  if (average <= 0) return '';
+  if (average >= 16) return 'félicitations';
+  if (average >= 14) return 'encouragements';
+  if (average >= 10) return 'progresse';
+  return 'insuffisant';
 }
 
 /**

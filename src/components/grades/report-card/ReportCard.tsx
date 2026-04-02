@@ -16,8 +16,9 @@
  */
 import React, { useState } from 'react';
 import { Printer, X } from 'lucide-react';
-import type { Student, Grade } from '../../../types';
-import { calculateAverage, getGradeLevel, formatScore } from '../../../utils/grades';
+import type { Student } from '../../../types/student';
+import type { Grade } from '../../../types/grade';
+import { calculateAverage, getGradeLevel, formatScore, getMentionFromAverage } from '../../../utils/grades';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -60,7 +61,7 @@ export function ReportCard({
   otherTermsAverages, onClose,
 }: ReportCardProps) {
   const [observation, setObservation] = useState('');
-  const [mention, setMention] = useState<Mention>('');
+  const [mention, setMention] = useState<Mention>(() => getMentionFromAverage(calculateAverage(grades)));
   const [absences, setAbsences] = useState('');
   const [demiJournees, setDemiJournees] = useState('');
   const [retards, setRetards] = useState('');
@@ -74,6 +75,9 @@ export function ReportCard({
 
   const studentAverage = calculateAverage(grades);
   const notedCount = grades.length;
+
+  // Mention auto-calculée selon la moyenne (modifiable manuellement avant impression)
+  const autoMention = getMentionFromAverage(studentAverage);
 
   const handlePrint = () => window.print();
 
@@ -117,19 +121,24 @@ export function ReportCard({
           {/* Mention + absences */}
           <div className="space-y-3">
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">
-                Mention
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                  Mention
+                </label>
+                {autoMention && mention === autoMention && (
+                  <span className="text-xs text-indigo-500 font-medium">● auto</span>
+                )}
+              </div>
               <select
                 value={mention}
                 onChange={e => setMention(e.target.value as Mention)}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500"
               >
                 <option value="">— Choisir —</option>
-                <option value="félicitations">Félicitations</option>
-                <option value="encouragements">Encouragements</option>
-                <option value="progresse">Doit progresser</option>
-                <option value="insuffisant">Manque de travail</option>
+                <option value="félicitations">Félicitations (≥ 16/20)</option>
+                <option value="encouragements">Encouragements (14–16)</option>
+                <option value="progresse">Doit progresser (10–14)</option>
+                <option value="insuffisant">Manque de travail (&lt; 10)</option>
               </select>
             </div>
             <div className="grid grid-cols-3 gap-2">
