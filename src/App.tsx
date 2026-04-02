@@ -16,6 +16,7 @@ import { Settings } from './components/settings/Settings';
 import { ArchivePage } from './components/archive/ArchivePage';
 import { ImportPage } from './components/import/ImportPage';
 import { AdminPage } from './components/admin/AdminPage';
+import { TemplatesPage } from './components/options/TemplatesPage';
 import { NavigationContext } from './contexts/NavigationContext';
 
 function App() {
@@ -71,6 +72,8 @@ function App() {
         return hasPermission('admin:users') || hasPermission('admin:roles')
           ? <AdminPage />
           : <AccessDenied />;
+      case '/options/templates':
+        return hasPermission('settings:view') ? <TemplatesPage /> : <AccessDenied />;
       default:
         return <StudentList />;
     }

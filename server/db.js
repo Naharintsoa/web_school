@@ -141,6 +141,39 @@ export async function initDB() {
       console.log('Super admin créé.');
     }
 
+    // 4. Insérer les templates de documents par défaut si absents
+    await client.query(`ALTER TABLE document_templates ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`);
+    const DEFAULT_TEMPLATE_SEEDS = [
+      {
+        id: 'badge',
+        name: 'Badge',
+        description: 'Badge élève avec photo, matricule et classe',
+      },
+      {
+        id: 'certificat-scolarite',
+        name: 'Certificat de scolarité',
+        description: "Atteste qu'un élève est inscrit dans l'établissement",
+      },
+      {
+        id: 'certificat-radiation',
+        name: 'Certificat de radiation',
+        description: "Atteste qu'un élève a quitté l'établissement",
+      },
+      {
+        id: 'certificat-identite',
+        name: "Certificat d'identité",
+        description: 'Carte d\'identité scolaire avec photo et informations élève',
+      },
+    ];
+    for (const tpl of DEFAULT_TEMPLATE_SEEDS) {
+      await client.query(
+        `INSERT INTO document_templates (id, name, description, code)
+         VALUES ($1, $2, $3, '')
+         ON CONFLICT (id) DO NOTHING`,
+        [tpl.id, tpl.name, tpl.description]
+      );
+    }
+
     console.log('Base de données initialisée avec succès.');
   } finally {
     client.release();

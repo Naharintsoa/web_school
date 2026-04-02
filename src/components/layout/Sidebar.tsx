@@ -2,9 +2,11 @@
  * Barre de navigation latérale.
  * Les items visibles sont filtrés par les permissions de la session courante.
  */
+import React from 'react';
 import {
   Users, GraduationCap, ClipboardList, Settings,
   LogOut, BookOpen, Archive, Upload, KeyRound, Shield,
+  SlidersHorizontal, ChevronDown, ChevronRight, LayoutTemplate,
 } from 'lucide-react';
 import { FR } from '../../constants/translations';
 import { useAuthContext } from '../../contexts/AuthContext';
@@ -37,9 +39,13 @@ const MENU_ITEMS: MenuItem[] = [
 
 export function Sidebar({ onNavigate, activePath, onLogout }: SidebarProps) {
   const { hasPermission, hasAnyPermission, session } = useAuthContext();
+  const [optionsOpen, setOptionsOpen] = React.useState(
+    activePath.startsWith('/options')
+  );
 
   const visibleItems = MENU_ITEMS.filter(item => hasPermission(item.permission));
   const showAdmin = hasAnyPermission('admin:users', 'admin:roles');
+  const showOptions = hasPermission('settings:view');
 
   return (
     <div className="h-screen w-64 bg-indigo-900 text-white flex flex-col">
@@ -77,6 +83,48 @@ export function Sidebar({ onNavigate, activePath, onLogout }: SidebarProps) {
             </button>
           );
         })}
+
+        {/* Séparateur + Options */}
+        {showOptions && (
+          <>
+            <div className="my-2 border-t border-indigo-800" />
+            {/* Menu Options (accordéon) */}
+            <button
+              onClick={() => setOptionsOpen((o) => !o)}
+              className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                activePath.startsWith('/options')
+                  ? 'bg-indigo-700 text-white'
+                  : 'text-indigo-200 hover:bg-indigo-800 hover:text-white'
+              }`}
+            >
+              <SlidersHorizontal size={18} className={activePath.startsWith('/options') ? 'text-white' : 'text-indigo-400'} />
+              <span>Options</span>
+              <span className="ml-auto">
+                {optionsOpen
+                  ? <ChevronDown size={14} className="text-indigo-300" />
+                  : <ChevronRight size={14} className="text-indigo-300" />
+                }
+              </span>
+            </button>
+
+            {optionsOpen && (
+              <div className="ml-4 mt-0.5 space-y-0.5">
+                <button
+                  onClick={() => onNavigate('/options/templates')}
+                  className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                    activePath === '/options/templates'
+                      ? 'bg-indigo-600 text-white shadow-sm'
+                      : 'text-indigo-300 hover:bg-indigo-800 hover:text-white'
+                  }`}
+                >
+                  <LayoutTemplate size={15} className={activePath === '/options/templates' ? 'text-white' : 'text-indigo-400'} />
+                  <span>Templates</span>
+                  {activePath === '/options/templates' && <span className="ml-auto w-1.5 h-1.5 bg-white rounded-full" />}
+                </button>
+              </div>
+            )}
+          </>
+        )}
 
         {/* Séparateur + Administration */}
         {showAdmin && (
