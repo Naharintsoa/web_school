@@ -3,7 +3,7 @@ import { X, Edit2, Trash2, Phone, Mail, MapPin } from 'lucide-react';
 import type { Student } from '../../types/student';
 import { EditStudentModal } from './EditStudentModal';
 import { SiblingsSection } from './SiblingsSection';
-import { formatMatricule } from '../../utils/matricule';
+
 import { studentApi } from '../../services/api';
 import { FR } from '../../constants/translations';
 
@@ -100,7 +100,7 @@ export function StudentDetailsModal({ student, allStudents, onClose, onEdit, onD
                   <div>
                     <dt className="text-sm font-medium text-gray-500">{FR.students.matricule}</dt>
                     <dd className="mt-1 text-sm text-gray-900">
-                      {currentStudent.matricule ? formatMatricule(currentStudent.matricule) : '-'}
+                      {currentStudent.matricule ? currentStudent.matricule : '-'}
                     </dd>
                   </div>
                   <div>

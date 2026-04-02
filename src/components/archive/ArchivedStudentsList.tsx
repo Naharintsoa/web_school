@@ -1,7 +1,7 @@
 import React from 'react';
 import { Search, RotateCcw, Clock } from 'lucide-react';
 import type { ArchivedStudent } from '../../types/archive';
-import { formatMatricule } from '../../utils/matricule';
+
 import { FR } from '../../constants/translations';
 
 interface ArchivedStudentsListProps {
@@ -52,7 +52,7 @@ export function ArchivedStudentsList({ archivedStudents, onRestore, onClose }: A
                         N°{archived.student.studentNumber}
                       </span>
                       <span className="text-sm text-gray-500">
-                        {archived.student.matricule ? formatMatricule(archived.student.matricule) : '-'}
+                        {archived.student.matricule ? archived.student.matricule : '-'}
                       </span>
                     </div>
                     <h3 className="text-lg font-medium text-gray-900 mt-1">

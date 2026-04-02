@@ -7,7 +7,7 @@ import { Search, RotateCcw, Clock, Archive, Loader2, UserX } from 'lucide-react'
 import type { ArchivedStudent } from '../../types/archive';
 import { archiveApi } from '../../services/archiveApi';
 import { studentApi } from '../../services/api';
-import { formatMatricule } from '../../utils/matricule';
+
 import { useToast } from '../../contexts/ToastContext';
 import { FR } from '../../constants/translations';
 
@@ -120,7 +120,7 @@ export function ArchivePage() {
                       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-sm text-gray-500">
                         <span>N°{archived.student.studentNumber}</span>
                         {archived.student.matricule && (
-                          <span>{formatMatricule(archived.student.matricule)}</span>
+                          <span>{archived.student.matricule}</span>
                         )}
                         <span className="px-2 py-0.5 bg-gray-100 rounded-full text-xs font-medium text-gray-600">
                           {archived.student.grade}

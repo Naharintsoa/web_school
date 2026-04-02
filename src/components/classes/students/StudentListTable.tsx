@@ -1,7 +1,7 @@
 import React from 'react';
 import { Hash, FileCheck, FileX, Edit2, Trash2 } from 'lucide-react';
 import type { Student } from '../../../types/student';
-import { formatMatricule } from '../../../utils/matricule';
+
 import { FR } from '../../../constants/translations';
 
 interface StudentListTableProps {
@@ -42,7 +42,7 @@ export function StudentListTable({
                 <div className="flex items-center text-gray-600">
                   <Hash size={16} className="mr-1" />
                   <span className="text-sm font-medium">
-                    {student.matricule ? formatMatricule(student.matricule) : '-'}
+                    {student.matricule ? student.matricule : '-'}
                   </span>
                 </div>
               </div>

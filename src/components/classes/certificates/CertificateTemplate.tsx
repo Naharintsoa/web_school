@@ -1,7 +1,7 @@
 import React from 'react';
 import type { Student } from '../../../types';
 import { useSchoolYear } from '../../../contexts/SchoolYearContext';
-import { formatMatricule } from '../../../utils/matricule';
+
 
 // Composant pour l'entête
 function CertificateHeader() {
@@ -86,7 +86,7 @@ export function CertificateTemplate({ type, student }: CertificateTemplateProps)
                 <strong>Classe actuelle :</strong> {student.grade}
               </p>
               <p className="text-[12px] font-tahoma">
-                <strong>Numéro matricule :</strong> {formatMatricule(student.matricule)}
+                <strong>Numéro matricule :</strong> {student.matricule}
               </p>
 
               <p className="text-center mt-4 text-[12px] font-serif font-tahoma">

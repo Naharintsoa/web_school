@@ -1,7 +1,5 @@
-import React from 'react';
 import { Hash, Calendar, Shield } from 'lucide-react';
 import type { Student } from '../../../types/student';
-import { formatMatricule } from '../../../utils/matricule';
 import { FR } from '../../../constants/translations';
 
 interface StudentInfoSectionProps {
@@ -93,14 +91,6 @@ export function StudentInfoSection({ data, onUpdate }: StudentInfoSectionProps) 
         </div>
       </div>
 
-      {/* Display formatted matricule if exists */}
-      {data.matricule && (
-        <div className="bg-gray-50 rounded-md p-3">
-          <p className="text-sm text-gray-600">
-            Matricule formaté: <span className="font-medium">{formatMatricule(data.matricule)}</span>
-          </p>
-        </div>
-      )}
 
       {/* Numéro ISS */}
       <div>
