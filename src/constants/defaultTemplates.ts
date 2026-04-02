@@ -430,7 +430,7 @@ export const DEFAULT_TEMPLATES: DocumentTemplate[] = [
   {
     id: 'certificat-identite',
     name: "Certificat d'identité",
-    description: 'Carte d'identité scolaire avec photo et informations élève',
+      description: "Carte d'identité scolaire avec photo et informations élève",
     code: CERTIFICAT_IDENTITE_DEFAULT,
   },
 ];
