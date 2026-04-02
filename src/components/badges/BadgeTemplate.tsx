@@ -5,77 +5,60 @@ interface BadgeTemplateProps {
   student: Student;
 }
 
-function formatDate(iso: string): string {
+function fmt(iso: string): string {
   if (!iso) return '—';
-  try {
-    return new Date(iso).toLocaleDateString('fr-FR');
-  } catch {
-    return iso;
-  }
+  try { return new Date(iso).toLocaleDateString('fr-FR'); } catch { return iso; }
 }
 
 /**
- * Badge scolaire.
- * title-wrapper est en display:block (photo + titre école + infos élève empilés verticalement).
- * Correspond au modèle Twig badge multiple de l'établissement.
+ * Badge scolaire – layout inspiré du template Twig :
+ * - Bordure double bleue
+ * - En-tête coloré avec titre + année scolaire
+ * - Corps : photo à gauche | infos élève à droite
+ * - Section vaccination
+ * - Zone 3 signatures
  */
 export function BadgeTemplate({ student }: BadgeTemplateProps) {
   const { currentYear } = useSchoolYear();
 
   return (
-    <div className="bdg-wrapper">
-      <div className="bdg-container">
-        {/* title-wrapper SANS flex : photo, titre école, infos élève en colonne */}
-        <div className="bdg-title-wrapper">
+    <div className="bdg-outer">
+      <div className="bdg-card">
+
+        {/* ── En-tête ── */}
+        <div className="bdg-header">
+          <div className="bdg-header-title">CARTE D&apos;ÉLÈVE</div>
+          <div className="bdg-header-school">COLLÈGE PRIVÉ SULLY</div>
+          <div className="bdg-header-year">Année scolaire {student.schoolYear || currentYear}</div>
+        </div>
+
+        {/* ── Corps : photo + infos ── */}
+        <div className="bdg-body">
           {/* Photo */}
-          <div className="bdg-title-square">
+          <div className="bdg-photo-frame">
             {student.photoUrl ? (
               <img src={student.photoUrl} alt="" className="bdg-photo-img" />
             ) : (
-              <span className="bdg-photo-initials">
-                {(student.firstName?.[0] ?? '')}{(student.lastName?.[0] ?? '')}
+              <span className="bdg-initials">
+                {(student.firstName?.[0] ?? '').toUpperCase()}
+                {(student.lastName?.[0] ?? '').toUpperCase()}
               </span>
             )}
           </div>
 
-          {/* Titre établissement */}
-          <div className="bdg-section-title">
-            <strong>COLLÈGE PRIVÉ SULLY</strong>
-            <br />
-            <strong>CARTE D&apos;ÉLÈVE</strong>
-            <br />
-            <strong>Année scolaire {student.schoolYear || currentYear}</strong>
-          </div>
-
           {/* Infos élève */}
-          <table className="bdg-info-table">
-            <tbody>
-              <tr>
-                <td className="bdg-info-label">Nom :</td>
-                <td className="bdg-info-value bdg-blue">{student.lastName?.toUpperCase() || '—'}</td>
-              </tr>
-              <tr>
-                <td className="bdg-info-label">Prénoms :</td>
-                <td className="bdg-info-value bdg-blue">{student.firstName || '—'}</td>
-              </tr>
-              <tr>
-                <td className="bdg-info-label">Né(e) le :</td>
-                <td className="bdg-info-value bdg-blue">{formatDate(student.dateOfBirth)}</td>
-              </tr>
-              <tr>
-                <td className="bdg-info-label">Classe :</td>
-                <td className="bdg-info-value bdg-blue">{student.grade || '—'}</td>
-              </tr>
-              <tr>
-                <td className="bdg-info-label">N° Matricule :</td>
-                <td className="bdg-info-value bdg-blue">{student.matricule || '—'}</td>
-              </tr>
-            </tbody>
-          </table>
+          <div className="bdg-info">
+            <Row label="Nom"         value={student.lastName?.toUpperCase() || '—'} blue />
+            <Row label="Prénoms"     value={student.firstName || '—'} blue />
+            <Row label="Né(e) le"    value={fmt(student.dateOfBirth)} blue />
+            <Row label="Classe"      value={student.grade || '—'} blue />
+            <Row label="Matricule"   value={student.matricule || '—'} blue />
+            <Row label="N° ISS"      value={student.issNumber || '—'} red />
+          </div>
         </div>
 
-        {/* Vaccination */}
-        <div className="bdg-vaccination">
+        {/* ── Vaccination ── */}
+        <div className="bdg-vacc-block">
           <div className="bdg-vacc-labels">
             <div>Primo vaccination</div>
             <div>Revaccination</div>
@@ -88,144 +71,209 @@ export function BadgeTemplate({ student }: BadgeTemplateProps) {
           </table>
         </div>
 
-        {/* Signatures */}
-        <div className="bdg-signatures">
-          <div>Signature et cachet</div>
-          <div>Cachet I.S.S</div>
-          <div>Signature de l&apos;élève</div>
+        {/* ── Signatures ── */}
+        <div className="bdg-sigs">
+          <div className="bdg-sig">
+            <div className="bdg-sig-line" />
+            <span>Signature et cachet</span>
+          </div>
+          <div className="bdg-sig">
+            <div className="bdg-sig-line" />
+            <span>Cachet I.S.S</span>
+          </div>
+          <div className="bdg-sig">
+            <div className="bdg-sig-line" />
+            <span>Signature de l&apos;élève</span>
+          </div>
         </div>
       </div>
 
       <style>{`
-        .bdg-wrapper {
-          width: 98mm;
-          min-height: 135mm;
-          padding: 3mm;
+        .bdg-outer {
+          width: 96mm;
+          padding: 2.5mm;
           box-sizing: border-box;
-          font-family: 'Times New Roman', serif;
+          font-family: 'Times New Roman', Times, serif;
           font-size: 11px;
+          color: #111;
         }
 
-        .bdg-container {
+        /* Carte principale – double border bleu */
+        .bdg-card {
           width: 100%;
           border: 1.5mm double #2097bf;
-          padding: 3.5mm;
+          border-radius: 1.5mm;
+          overflow: hidden;
           box-sizing: border-box;
           display: flex;
           flex-direction: column;
-          gap: 2.5mm;
-          min-height: 128mm;
         }
 
-        /* PAS de flex ici — tout en colonne (block) */
-        .bdg-title-wrapper {
-          display: block;
+        /* ── En-tête ── */
+        .bdg-header {
+          background: linear-gradient(135deg, #09448a 0%, #1565c0 50%, #2097bf 100%);
+          color: #fff;
           text-align: center;
+          padding: 3mm 2mm 2.5mm;
+          line-height: 1.35;
+        }
+        .bdg-header-title {
+          font-size: 13px;
+          font-weight: bold;
+          letter-spacing: 0.04em;
+          text-transform: uppercase;
+        }
+        .bdg-header-school {
+          font-size: 12px;
+          font-weight: bold;
+          margin-top: 0.5mm;
+          opacity: 0.92;
+        }
+        .bdg-header-year {
+          font-size: 10px;
+          margin-top: 1mm;
+          opacity: 0.80;
+          font-style: italic;
         }
 
-        .bdg-title-square {
+        /* ── Corps ── */
+        .bdg-body {
+          display: flex;
+          gap: 3mm;
+          padding: 3mm;
+          background: #fafcff;
+          border-bottom: 0.3mm solid #cce4f7;
+        }
+
+        /* Photo */
+        .bdg-photo-frame {
+          flex-shrink: 0;
           width: 28mm;
           height: 35mm;
-          border: 0.3mm solid #000;
-          margin: 0 auto 2mm;
-          background: #f9f9f9;
+          border: 0.4mm solid #b0c4de;
+          border-radius: 1mm;
           overflow: hidden;
+          background: #e8f0fe;
           display: flex;
           align-items: center;
           justify-content: center;
+          box-shadow: 0 0.3mm 1mm rgba(32,151,191,0.15);
         }
-
         .bdg-photo-img {
           width: 100%;
           height: 100%;
           object-fit: cover;
+          object-position: top center;
         }
-
-        .bdg-photo-initials {
-          font-size: 16px;
+        .bdg-initials {
+          font-size: 18px;
           font-weight: bold;
-          color: #9ca3af;
+          color: #2097bf;
+          letter-spacing: -0.02em;
         }
 
-        .bdg-section-title {
-          color: #09448a;
-          font-size: 11.5px;
-          line-height: 1.5;
-          margin-bottom: 2mm;
-          text-align: center;
+        /* Infos */
+        .bdg-info {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          gap: 0.8mm;
+          padding-top: 0.5mm;
         }
-
-        .bdg-info-table {
-          width: 100%;
-          border-collapse: collapse;
-          text-align: left;
+        .bdg-row {
+          display: flex;
+          gap: 1.5mm;
+          align-items: baseline;
+          font-size: 10.5px;
+          line-height: 1.55;
         }
-
-        .bdg-info-table td {
-          padding: 0.5mm 1mm;
-          vertical-align: top;
-        }
-
-        .bdg-info-label {
+        .bdg-row-label {
           font-weight: bold;
+          color: #333;
           white-space: nowrap;
-          width: 40%;
-          color: #222;
+          min-width: 18mm;
         }
-
-        .bdg-info-value {
+        .bdg-row-sep {
+          color: #999;
+        }
+        .bdg-row-val {
           font-weight: bold;
         }
-
         .bdg-blue { color: #2097bf; }
         .bdg-red  { color: #cc0000; }
 
-        .bdg-vaccination {
+        /* ── Vaccination ── */
+        .bdg-vacc-block {
           display: flex;
           align-items: flex-start;
           gap: 3mm;
-          margin-top: 1mm;
+          padding: 2.5mm 3mm 2mm;
+          background: #fafcff;
+          border-bottom: 0.3mm solid #cce4f7;
         }
-
         .bdg-vacc-labels {
-          width: 45%;
+          display: flex;
+          flex-direction: column;
+          gap: 0.5mm;
           font-weight: bold;
-          line-height: 2;
+          font-size: 10px;
+          line-height: 1.8;
           white-space: nowrap;
-          font-size: 10.5px;
+          color: #333;
         }
-
         .bdg-vacc-table {
           border-collapse: collapse;
-          flex: 1;
+          margin-top: 0.5mm;
         }
-
         .bdg-vacc-table td {
-          border: 0.3mm solid #000;
+          border: 0.3mm solid #555;
           width: 12mm;
           height: 6mm;
           padding: 0;
         }
 
-        .bdg-signatures {
+        /* ── Signatures ── */
+        .bdg-sigs {
           display: flex;
-          justify-content: space-between;
-          margin-top: auto;
-          padding-top: 10mm;
-          font-size: 10px;
+          padding: 3mm 2mm 2.5mm;
+          background: #f5f9ff;
         }
-
-        .bdg-signatures div {
+        .bdg-sig {
           flex: 1;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 1.5mm;
+          padding: 0 1mm;
+        }
+        .bdg-sig-line {
+          width: 80%;
+          height: 0;
+          border-bottom: 0.3mm solid #aaa;
+          margin-top: 8mm;
+        }
+        .bdg-sig span {
+          font-size: 9px;
+          color: #555;
           text-align: center;
           font-style: italic;
-          color: #444;
         }
 
         @media print {
-          .bdg-wrapper { page-break-inside: avoid; }
+          .bdg-outer { page-break-inside: avoid; }
         }
       `}</style>
+    </div>
+  );
+}
+
+/* ── Composant ligne infos élève ── */
+function Row({ label, value, blue, red }: { label: string; value: string; blue?: boolean; red?: boolean }) {
+  return (
+    <div className="bdg-row">
+      <span className="bdg-row-label">{label}</span>
+      <span className="bdg-row-sep">:</span>
+      <span className={`bdg-row-val ${blue ? 'bdg-blue' : red ? 'bdg-red' : ''}`}>{value}</span>
     </div>
   );
 }
