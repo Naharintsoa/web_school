@@ -244,9 +244,10 @@ function UsersTab() {
   const [confirmDelete, setConfirmDelete] = useState<AppUser | null>(null);
   const [error, setError] = useState('');
 
-  const reload = useCallback(() => {
-    setUsers(getUsers());
-    setRoles(getRoles());
+  const reload = useCallback(async () => {
+    const [u, r] = await Promise.all([getUsers(), getRoles()]);
+    setUsers(u);
+    setRoles(r);
   }, []);
 
   useEffect(() => { reload(); }, [reload]);
@@ -255,22 +256,22 @@ function UsersTab() {
     `${u.fullName} ${u.username} ${u.email}`.toLowerCase().includes(search.toLowerCase())
   );
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!confirmDelete) return;
     try {
-      deleteUser(confirmDelete.id);
+      await deleteUser(confirmDelete.id);
       setConfirmDelete(null);
-      reload();
+      await reload();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur de suppression.');
       setConfirmDelete(null);
     }
   };
 
-  const handleToggle = (user: AppUser) => {
+  const handleToggle = async (user: AppUser) => {
     try {
-      toggleUserActive(user.id);
-      reload();
+      await toggleUserActive(user.id);
+      await reload();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur.');
     }
@@ -444,8 +445,8 @@ function RolesTab() {
   const [error, setError] = useState('');
   const [confirmDelete, setConfirmDelete] = useState<AppRole | null>(null);
 
-  const reload = useCallback(() => {
-    const r = getRoles();
+  const reload = useCallback(async () => {
+    const r = await getRoles();
     setRoles(r);
     if (selected) {
       const refreshed = r.find(x => x.id === selected.id);
@@ -472,8 +473,8 @@ function RolesTab() {
     setSaving(true);
     setError('');
     try {
-      updateRole(selected.id, { permissions: editPerms });
-      reload();
+      await updateRole(selected.id, { permissions: editPerms });
+      await reload();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur.');
     } finally {
@@ -481,28 +482,28 @@ function RolesTab() {
     }
   };
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     setError('');
     if (!newLabel.trim()) { setError('Le libellé est requis.'); return; }
     try {
-      const r = createRole({ name: newName || newLabel, label: newLabel, permissions: editPerms });
+      const r = await createRole({ name: newName || newLabel, label: newLabel, permissions: editPerms });
       setIsCreating(false);
       setNewLabel('');
       setNewName('');
-      reload();
+      await reload();
       selectRole(r);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur.');
     }
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!confirmDelete) return;
     try {
-      deleteRole(confirmDelete.id);
+      await deleteRole(confirmDelete.id);
       setConfirmDelete(null);
       setSelected(null);
-      reload();
+      await reload();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur de suppression.');
       setConfirmDelete(null);
