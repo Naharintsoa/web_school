@@ -23,4 +23,15 @@ export const studentApi = {
   delete: async (id: string): Promise<void> => {
     return apiFetch<void>(`/students/${id}`, { method: 'DELETE' });
   },
+
+  getSiblings: async (familyId: string): Promise<Student[]> => {
+    return apiFetch<Student[]>(`/students/family/${encodeURIComponent(familyId)}`);
+  },
+
+  updateFamily: async (id: string, familyId: string | null): Promise<Student> => {
+    return apiFetch<Student>(`/students/${id}/family`, {
+      method: 'PATCH',
+      body: JSON.stringify({ familyId }),
+    });
+  },
 };

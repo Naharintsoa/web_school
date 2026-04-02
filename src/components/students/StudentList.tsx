@@ -2,7 +2,7 @@
  * Liste principale des élèves avec recherche, ajout, édition et suppression.
  * La suppression archive d'abord l'élève avant de le retirer de la liste active.
  */
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, Plus, Edit2, Trash2, Hash, Archive, Loader2 } from 'lucide-react';
 import type { Student, Grade } from '../../types';
 import type { ArchivedStudent } from '../../types/archive';
@@ -302,6 +302,7 @@ export function StudentList() {
       {selectedStudent && (
         <StudentDetailsModal
           student={selectedStudent}
+          allStudents={students}
           onClose={handleCloseDetails}
           onEdit={handleEditStudent}
           onDelete={handleDeleteStudent}

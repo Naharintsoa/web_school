@@ -32,6 +32,7 @@ export interface Student {
   cycle: Cycle;
   photoUrl?: string;
   issNumber?: string;
+  familyId?: string;
   parentInfo: ParentInfo;
   enrollmentDate: string;
   schoolYear: string;

@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS students (
   cycle           TEXT,
   photo_url       TEXT,
   iss_number      TEXT,
+  family_id       TEXT,
   parent_info     JSONB NOT NULL DEFAULT '{}',
   enrollment_date TEXT,
   school_year     TEXT

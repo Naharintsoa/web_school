@@ -2,18 +2,20 @@ import React from 'react';
 import { X, Edit2, Trash2, Phone, Mail, MapPin } from 'lucide-react';
 import type { Student } from '../../types/student';
 import { EditStudentModal } from './EditStudentModal';
+import { SiblingsSection } from './SiblingsSection';
 import { formatMatricule } from '../../utils/matricule';
 import { studentApi } from '../../services/api';
 import { FR } from '../../constants/translations';
 
 interface StudentDetailsModalProps {
   student: Student;
+  allStudents: Student[];
   onClose: () => void;
   onEdit: (student: Student) => void;
   onDelete: (student: Student) => void;
 }
 
-export function StudentDetailsModal({ student, onClose, onEdit, onDelete }: StudentDetailsModalProps) {
+export function StudentDetailsModal({ student, allStudents, onClose, onEdit, onDelete }: StudentDetailsModalProps) {
   const [showEditModal, setShowEditModal] = React.useState(false);
   const [currentStudent, setCurrentStudent] = React.useState(student);
 
@@ -174,6 +176,15 @@ export function StudentDetailsModal({ student, onClose, onEdit, onDelete }: Stud
               </div>
             </div>
           </div>
+
+          {/* Fratries */}
+          <SiblingsSection
+            student={currentStudent}
+            allStudents={allStudents}
+            onStudentUpdated={(updated) => {
+              if (updated.id === currentStudent.id) setCurrentStudent(updated);
+            }}
+          />
         </div>
       </div>
     </div>
