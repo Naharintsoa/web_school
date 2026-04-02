@@ -2,57 +2,69 @@
  * Page de gestion des templates Twig pour les documents scolaires.
  * Permet de lister, éditer, prévisualiser et enregistrer les templates.
  */
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   AlertCircle, Check, ChevronRight, Code2, Eye,
   FileText, Loader2, RefreshCw, Save,
 } from 'lucide-react';
-import Twig from 'twig';
+// Twig chargé en texte brut — injecté dans l'iframe pour éviter tout bundling CJS
+// @ts-ignore
+import twigScript from 'twig/twig.min.js?raw';
 import { DEFAULT_TEMPLATES, getDefaultTemplate } from '../../constants/defaultTemplates';
 import { templateService } from '../../services/templateService';
 import type { TemplateDetail } from '../../services/templateService';
 
 // ─── Données de prévisualisation fictives ─────────────────────────────────────
 
-const MOCK_STUDENT = {
-  firstName: 'Jean',
-  lastName: 'RAKOTO',
-  matricule: '2024-6EME-001',
-  grade: '6EME',
-  dateOfBirth: '12/05/2012',
-  enrollmentDate: '03/09/2024',
-  photoUrl: '',
-  issNumber: 'ISS-2024-0042',
-  schoolYear: '2024-2025',
-  parentInfo: {
-    fatherName: 'RAKOTO Marcel',
-    motherName: 'RABE Claudine',
-    fatherPhone: '034 00 000 00',
-    motherPhone: '033 00 000 00',
-    address: 'Antananarivo',
-  },
-};
-
 const MOCK_CONTEXT = {
-  student: MOCK_STUDENT,
+  student: {
+    firstName: 'Jean',
+    lastName: 'RAKOTO',
+    matricule: '2024-6EME-001',
+    grade: '6EME',
+    dateOfBirth: '12/05/2012',
+    enrollmentDate: '03/09/2024',
+    photoUrl: '',
+    issNumber: 'ISS-2024-0042',
+    schoolYear: '2024-2025',
+    parentInfo: {
+      fatherName: 'RAKOTO Marcel',
+      motherName: 'RABE Claudine',
+      fatherPhone: '034 00 000 00',
+      motherPhone: '033 00 000 00',
+      address: 'Antananarivo',
+    },
+  },
   schoolYear: '2024-2025',
   today: new Date().toLocaleDateString('fr-FR'),
 };
 
-// ─── Rendu Twig ───────────────────────────────────────────────────────────────
+// ─── Construction du contenu iframe ──────────────────────────────────────────
 
-function renderTwig(code: string): { html: string; error: string | null } {
+function buildIframeContent(code: string, twig: string): string {
   if (!code.trim()) {
-    return { html: '<p style="color:#999;padding:16px;">Aucun contenu à prévisualiser.</p>', error: null };
+    return '<html><body style="color:#999;font-family:sans-serif;padding:16px;">Aucun contenu à prévisualiser.</body></html>';
   }
-  try {
-    const template = Twig.twig({ data: code, rethrow: true });
-    const html = template.render(MOCK_CONTEXT);
-    return { html, error: null };
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    return { html: '', error: msg };
-  }
+  const escapedCode = JSON.stringify(code);
+  const escapedCtx  = JSON.stringify(MOCK_CONTEXT);
+  return `<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"></head>
+<body>
+<script>${twig}<\/script>
+<script>
+try {
+  var tpl = Twig.twig({ data: ${escapedCode}, rethrow: true });
+  var rendered = tpl.render(${escapedCtx});
+  document.open(); document.write(rendered); document.close();
+} catch (e) {
+  document.body.innerHTML =
+    '<pre style="color:#dc2626;font-family:monospace;padding:16px;font-size:13px;white-space:pre-wrap;">'
+    + '<strong>Erreur Twig :</strong>\\n' + (e.message || e) + '</pre>';
+}
+<\/script>
+</body>
+</html>`;
 }
 
 // ─── Composant liste ──────────────────────────────────────────────────────────
@@ -119,21 +131,12 @@ function EditorPanel({ template, onSaved }: EditorPanelProps) {
     setSaveMsg(null);
   }, [template.id]);
 
-  // Update iframe preview
+  // Update iframe preview via srcdoc (pas de doc.write)
   useEffect(() => {
     if (activeTab !== 'preview') return;
-    const { html, error } = renderTwig(code);
     const iframe = iframeRef.current;
     if (!iframe) return;
-    const doc = iframe.contentDocument || iframe.contentWindow?.document;
-    if (!doc) return;
-    doc.open();
-    doc.write(
-      error
-        ? `<html><body style="font-family:monospace;color:#dc2626;padding:16px;font-size:13px;"><strong>Erreur Twig :</strong><br><pre>${error}</pre></body></html>`
-        : html
-    );
-    doc.close();
+    iframe.srcdoc = buildIframeContent(code, twigScript as string);
   }, [activeTab, code]);
 
   const handleSave = async () => {
@@ -168,8 +171,6 @@ function EditorPanel({ template, onSaved }: EditorPanelProps) {
       setTimeout(() => setSaveMsg(null), 3000);
     }
   };
-
-  const twig = renderTwig(code);
 
   return (
     <div className="flex-1 flex flex-col min-w-0">
@@ -231,7 +232,6 @@ function EditorPanel({ template, onSaved }: EditorPanelProps) {
         >
           <Eye size={15} />
           Aperçu
-          {twig.error && <span className="ml-1 w-2 h-2 rounded-full bg-rose-500 inline-block" />}
         </button>
       </div>
 
@@ -241,16 +241,14 @@ function EditorPanel({ template, onSaved }: EditorPanelProps) {
           <div className="h-full flex flex-col">
             {/* Aide variables */}
             <div className="px-4 py-2 bg-amber-50 border-b border-amber-100 text-xs text-amber-700 flex-shrink-0">
-              <strong>Variables disponibles :</strong>{' '}
-              <code className="bg-amber-100 px-1 rounded">{'{{ student.firstName }}'}</code>{' '}
-              <code className="bg-amber-100 px-1 rounded">{'{{ student.lastName }}'}</code>{' '}
-              <code className="bg-amber-100 px-1 rounded">{'{{ student.matricule }}'}</code>{' '}
-              <code className="bg-amber-100 px-1 rounded">{'{{ student.grade }}'}</code>{' '}
-              <code className="bg-amber-100 px-1 rounded">{'{{ student.dateOfBirth }}'}</code>{' '}
-              <code className="bg-amber-100 px-1 rounded">{'{{ student.photoUrl }}'}</code>{' '}
-              <code className="bg-amber-100 px-1 rounded">{'{{ student.issNumber }}'}</code>{' '}
-              <code className="bg-amber-100 px-1 rounded">{'{{ schoolYear }}'}</code>{' '}
-              <code className="bg-amber-100 px-1 rounded">{'{{ today }}'}</code>
+              <strong>Variables :</strong>{' '}
+              {[
+                '{{ student.firstName }}', '{{ student.lastName }}', '{{ student.matricule }}',
+                '{{ student.grade }}', '{{ student.dateOfBirth }}', '{{ student.photoUrl }}',
+                '{{ student.issNumber }}', '{{ schoolYear }}', '{{ today }}',
+              ].map((v) => (
+                <code key={v} className="bg-amber-100 px-1 rounded mr-1">{v}</code>
+              ))}
             </div>
             <textarea
               value={code}
@@ -265,7 +263,7 @@ function EditorPanel({ template, onSaved }: EditorPanelProps) {
             ref={iframeRef}
             title="Aperçu du template"
             className="w-full h-full border-0 bg-white"
-            sandbox="allow-same-origin"
+            sandbox="allow-scripts allow-same-origin"
           />
         )}
       </div>
@@ -286,7 +284,6 @@ export function TemplatesPage() {
     setError(null);
     try {
       const data = await templateService.get(id);
-      // Si la DB n'a pas encore de code, utiliser le code par défaut
       if (!data.code) {
         const def = getDefaultTemplate(id);
         if (def) data.code = def.code;
@@ -305,10 +302,7 @@ export function TemplatesPage() {
 
   return (
     <div className="flex h-full min-h-0">
-      <TemplateList
-        selectedId={selectedId}
-        onSelect={setSelectedId}
-      />
+      <TemplateList selectedId={selectedId} onSelect={setSelectedId} />
 
       <div className="flex-1 flex flex-col min-w-0">
         {loading && (
@@ -339,7 +333,7 @@ export function TemplatesPage() {
           />
         )}
 
-        {!loading && !error && !template && !selectedId && (
+        {!loading && !error && !template && (
           <div className="flex-1 flex items-center justify-center text-slate-400 text-sm">
             Sélectionnez un template dans la liste.
           </div>
