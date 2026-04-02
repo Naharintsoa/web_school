@@ -54,7 +54,7 @@ export function CertificateTemplate({ type, student }: CertificateTemplateProps)
 
             {/* Titre */}
             <p className="text-center font-bold text-xs text-[#09438a] mt-2 head2">
-              CERTIFICAT DE SCOLARITE {currentYear}
+              {type === 'radiation' ? 'CERTIFICAT DE RADIATION' : 'CERTIFICAT DE SCOLARITE'} {currentYear}
             </p>
 
             {/* Introduction (Directrice) */}
