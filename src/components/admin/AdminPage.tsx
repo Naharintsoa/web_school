@@ -513,7 +513,7 @@ function RolesTab() {
   const isSuperAdmin = selected?.id === 'super_admin';
 
   return (
-    <div className="grid grid-cols-5 gap-4 min-h-[500px]">
+    <div className="grid grid-cols-5 gap-4 items-start">
       {/* Liste des rôles */}
       <div className="col-span-2 space-y-2">
         <button
@@ -547,9 +547,9 @@ function RolesTab() {
       </div>
 
       {/* Panneau droite : matrice de permissions */}
-      <div className="col-span-3 bg-white rounded-2xl ring-1 ring-slate-200 overflow-hidden flex flex-col">
+      <div className="col-span-3 bg-white rounded-2xl ring-1 ring-slate-200 overflow-hidden">
         {!selected && !isCreating ? (
-          <div className="flex-1 flex items-center justify-center text-slate-400 text-sm">
+          <div className="flex items-center justify-center py-16 text-slate-400 text-sm">
             <div className="text-center">
               <ShieldCheck size={32} className="mx-auto mb-2 text-slate-300" />
               Sélectionnez un rôle pour voir ses permissions
@@ -595,7 +595,7 @@ function RolesTab() {
             )}
 
             {/* Matrice permissions */}
-            <div className="flex-1 overflow-y-auto p-5 space-y-5">
+            <div className="p-5 space-y-5">
               {isSuperAdmin ? (
                 <div className="flex items-center gap-3 bg-violet-50 border border-violet-200 rounded-xl px-4 py-3 text-sm text-violet-700">
                   <Crown size={16} /> Le super administrateur possède toutes les permissions (non modifiable).
