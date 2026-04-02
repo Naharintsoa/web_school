@@ -12,9 +12,11 @@ export interface ParentInfo {
   fatherName: string;
   fatherOccupation: string;
   fatherPhone: string;
+  fatherEmail?: string;
   motherName: string;
   motherOccupation: string;
   motherPhone: string;
+  motherEmail?: string;
   email: string;
   address: string;
 }

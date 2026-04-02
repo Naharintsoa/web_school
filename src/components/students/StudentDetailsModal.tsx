@@ -404,9 +404,11 @@ function TabParents({ student, onSave }: { student: Student; onSave: (p: Partial
     fatherName:       pi.fatherName ?? '',
     fatherOccupation: pi.fatherOccupation ?? '',
     fatherPhone:      pi.fatherPhone ?? '',
+    fatherEmail:      pi.fatherEmail ?? '',
     motherName:       pi.motherName ?? '',
     motherOccupation: pi.motherOccupation ?? '',
     motherPhone:      pi.motherPhone ?? '',
+    motherEmail:      pi.motherEmail ?? '',
   });
 
   const set = (k: keyof typeof form) => (v: string) => setForm(f => ({ ...f, [k]: v }));
@@ -421,8 +423,10 @@ function TabParents({ student, onSave }: { student: Student; onSave: (p: Partial
 
   const handleCancel = () => {
     setForm({
-      fatherName: pi.fatherName ?? '', fatherOccupation: pi.fatherOccupation ?? '', fatherPhone: pi.fatherPhone ?? '',
-      motherName: pi.motherName ?? '', motherOccupation: pi.motherOccupation ?? '', motherPhone: pi.motherPhone ?? '',
+      fatherName: pi.fatherName ?? '', fatherOccupation: pi.fatherOccupation ?? '',
+      fatherPhone: pi.fatherPhone ?? '', fatherEmail: (pi as any).fatherEmail ?? '',
+      motherName: pi.motherName ?? '', motherOccupation: pi.motherOccupation ?? '',
+      motherPhone: pi.motherPhone ?? '', motherEmail: (pi as any).motherEmail ?? '',
     });
     setEditing(false);
   };
@@ -430,9 +434,7 @@ function TabParents({ student, onSave }: { student: Student; onSave: (p: Partial
   if (editing) {
     return (
       <div>
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-base font-semibold text-gray-800">Informations parents</h3>
-        </div>
+        <h3 className="text-base font-semibold text-gray-800 mb-4">Informations parents</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Père */}
           <div className="border border-blue-200 rounded-lg p-4 space-y-3">
@@ -440,6 +442,11 @@ function TabParents({ student, onSave }: { student: Student; onSave: (p: Partial
             <Field label="Nom complet"><Input value={form.fatherName} onChange={set('fatherName')} placeholder="Nom du père" /></Field>
             <Field label="Profession"><Input value={form.fatherOccupation} onChange={set('fatherOccupation')} placeholder="Profession" /></Field>
             <Field label="Téléphone"><Input value={form.fatherPhone} onChange={set('fatherPhone')} placeholder="+261..." /></Field>
+            <Field label="Email">
+              <input type="email" value={form.fatherEmail} onChange={e => set('fatherEmail')(e.target.value)}
+                placeholder="email@exemple.com"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+            </Field>
           </div>
           {/* Mère */}
           <div className="border border-pink-200 rounded-lg p-4 space-y-3">
@@ -447,6 +454,11 @@ function TabParents({ student, onSave }: { student: Student; onSave: (p: Partial
             <Field label="Nom complet"><Input value={form.motherName} onChange={set('motherName')} placeholder="Nom de la mère" /></Field>
             <Field label="Profession"><Input value={form.motherOccupation} onChange={set('motherOccupation')} placeholder="Profession" /></Field>
             <Field label="Téléphone"><Input value={form.motherPhone} onChange={set('motherPhone')} placeholder="+261..." /></Field>
+            <Field label="Email">
+              <input type="email" value={form.motherEmail} onChange={e => set('motherEmail')(e.target.value)}
+                placeholder="email@exemple.com"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-pink-500 focus:border-transparent" />
+            </Field>
           </div>
         </div>
         <EditBar onSave={handleSave} onCancel={handleCancel} saving={saving} />
@@ -463,14 +475,14 @@ function TabParents({ student, onSave }: { student: Student; onSave: (p: Partial
         </button>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <ParentCard title="Père" color="blue" name={pi.fatherName} job={pi.fatherOccupation} phone={pi.fatherPhone} />
-        <ParentCard title="Mère" color="pink" name={pi.motherName} job={pi.motherOccupation} phone={pi.motherPhone} />
+        <ParentCard title="Père" color="blue" name={pi.fatherName} job={pi.fatherOccupation} phone={pi.fatherPhone} email={pi.fatherEmail} />
+        <ParentCard title="Mère" color="pink" name={pi.motherName} job={pi.motherOccupation} phone={pi.motherPhone} email={pi.motherEmail} />
       </div>
     </div>
   );
 }
 
-function ParentCard({ title, color, name, job, phone }: { title: string; color: 'blue'|'pink'; name?: string; job?: string; phone?: string }) {
+function ParentCard({ title, color, name, job, phone, email }: { title: string; color: 'blue'|'pink'; name?: string; job?: string; phone?: string; email?: string }) {
   const border = color === 'blue' ? 'border-blue-200' : 'border-pink-200';
   const label  = color === 'blue' ? 'text-blue-600'  : 'text-pink-600';
   return (
@@ -480,6 +492,7 @@ function ParentCard({ title, color, name, job, phone }: { title: string; color: 
         <div><dt className="text-gray-400 text-xs">Nom</dt><dd className="font-medium">{name || <span className="text-gray-400 italic">—</span>}</dd></div>
         <div><dt className="text-gray-400 text-xs">Profession</dt><dd>{job || <span className="text-gray-400 italic">—</span>}</dd></div>
         <div className="flex items-center gap-1 text-gray-700"><Phone size={13} className="text-gray-400" /><span>{phone || <span className="text-gray-400 italic">—</span>}</span></div>
+        <div className="flex items-center gap-1 text-gray-700"><Mail size={13} className="text-gray-400" /><span>{email || <span className="text-gray-400 italic">—</span>}</span></div>
       </dl>
     </div>
   );
