@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Printer, Download, Edit, Loader } from 'lucide-react';
 import { CertificateTemplate } from './CertificateTemplate';
 import type { Student } from '../../../types';
@@ -37,10 +37,10 @@ export function CertificatePreview({ type, student, onClose }: CertificatePrevie
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 print:bg-white print:items-start">
-      <div className="bg-white rounded-lg shadow-xl max-h-[90vh] overflow-hidden print:shadow-none print:rounded-none">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 print:bg-white print:items-start overflow-y-auto py-4 px-2 sm:py-6 sm:items-center">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl overflow-hidden print:shadow-none print:rounded-none print:max-w-none">
         {/* Barre d'outils - cachée à l'impression */}
-        <div className="p-4 border-b border-gray-200 flex justify-between items-center print:hidden">
+        <div className="p-3 sm:p-4 border-b border-gray-200 flex justify-between items-center print:hidden">
           <h3 className="text-lg font-medium text-gray-900">
             {type === 'scolarite' ? FR.certificates.schooling : FR.certificates.removal}
           </h3>
@@ -88,7 +88,7 @@ export function CertificatePreview({ type, student, onClose }: CertificatePrevie
           </div>
         </div>
 
-        <div className="overflow-y-auto max-h-[calc(90vh-64px)] p-8 print:p-0">
+        <div className="overflow-auto p-2 sm:p-6 lg:p-8 print:p-0">
           {isEditing && (
             <div className="max-w-2xl mx-auto mb-4 print:hidden">
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -102,12 +102,16 @@ export function CertificatePreview({ type, student, onClose }: CertificatePrevie
               />
             </div>
           )}
-
-          <CertificateTemplate
-            type={type}
-            student={student}
-            customText={customText || undefined}
-          />
+          {/* Wrapper zoom sur mobile : le certificat A4 est affiché à échelle réduite */}
+          <div className="overflow-x-auto print:overflow-visible">
+            <div className="min-w-[320px] print:min-w-0">
+              <CertificateTemplate
+                type={type}
+                student={student}
+                customText={customText || undefined}
+              />
+            </div>
+          </div>
         </div>
       </div>
     </div>

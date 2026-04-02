@@ -14,7 +14,7 @@
  *   - Sélection de la mention
  *   - Bouton Imprimer → window.print()
  */
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Printer, X } from 'lucide-react';
 import type { Student } from '../../../types/student';
 import type { Grade } from '../../../types/grade';
@@ -56,7 +56,7 @@ const S = {
 // ─── Composant principal ──────────────────────────────────────────────────────
 
 export function ReportCard({
-  student, grades, allGrades, classStats,
+  student, grades, allGrades: _allGrades, classStats,
   term, schoolYear, classAverage, teacherName,
   otherTermsAverages, onClose,
 }: ReportCardProps) {
@@ -84,26 +84,27 @@ export function ReportCard({
   return (
     <>
       {/* ── Barre d'actions (masquée à l'impression) ── */}
-      <div className="no-print bg-indigo-900 text-white px-6 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <button onClick={onClose} className="p-1.5 hover:bg-indigo-800 rounded-lg" title="Fermer">
+      <div className="no-print bg-indigo-900 text-white px-3 sm:px-6 py-3 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <button onClick={onClose} className="p-1.5 hover:bg-indigo-800 rounded-lg flex-shrink-0" title="Fermer">
             <X size={18} />
           </button>
-          <span className="text-sm font-medium">
-            Bulletin — {student.firstName} {student.lastName} — Trimestre {term}
+          <span className="text-xs sm:text-sm font-medium truncate">
+            Bulletin — {student.firstName} {student.lastName} — T{term}
           </span>
         </div>
         <button
           onClick={handlePrint}
-          className="flex items-center gap-2 px-4 py-2 bg-white text-indigo-900 font-semibold rounded-lg hover:bg-indigo-50 text-sm"
+          className="flex items-center gap-1.5 px-3 sm:px-4 py-2 bg-white text-indigo-900 font-semibold rounded-lg hover:bg-indigo-50 text-xs sm:text-sm flex-shrink-0"
         >
-          <Printer size={16} />
-          Imprimer
+          <Printer size={15} />
+          <span className="hidden sm:inline">Imprimer</span>
+          <span className="sm:hidden">Print</span>
         </button>
       </div>
 
       {/* ── Zone édition avant impression (masquée à l'impression) ── */}
-      <div className="no-print bg-gray-50 border-b border-gray-200 px-6 py-4">
+      <div className="no-print bg-gray-50 border-b border-gray-200 px-3 sm:px-6 py-3 sm:py-4">
         <div className="max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-4">
           {/* Observation */}
           <div className="sm:col-span-2">

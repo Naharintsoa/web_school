@@ -25,7 +25,7 @@ export function BadgePreview({ students, onClose }: BadgePreviewProps) {
   return (
     <div className="fixed inset-0 bg-black/60 flex items-start justify-center z-[60] overflow-y-auto py-6 print:bg-white print:p-0 print:block print:overflow-visible">
       {/* Barre outils — masquée à l'impression */}
-      <div className="print:hidden fixed top-0 left-0 right-0 bg-white border-b border-slate-200 shadow-sm z-10 px-6 py-3 flex items-center justify-between">
+      <div className="print:hidden fixed top-0 left-0 right-0 bg-white border-b border-slate-200 shadow-sm z-10 px-3 sm:px-6 py-3 flex items-center justify-between">
         <div>
           <p className="font-semibold text-slate-800">Badges élèves</p>
           <p className="text-xs text-slate-500">{students.length} élève{students.length > 1 ? 's' : ''}</p>
@@ -47,8 +47,8 @@ export function BadgePreview({ students, onClose }: BadgePreviewProps) {
         </div>
       </div>
 
-      {/* Pages A4 */}
-      <div className="mt-16 print:mt-0 space-y-4 print:space-y-0">
+      {/* Pages A4 — scroll horizontal sur mobile */}
+      <div className="mt-16 print:mt-0 space-y-4 print:space-y-0 overflow-x-auto px-2 sm:px-0">
         {pages.map((page, pi) => {
           // Construire les lignes de 2 badges
           const rows: [Student, Student | null][] = [];

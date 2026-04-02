@@ -3,7 +3,7 @@ import {
   ArrowLeft, Edit2, Trash2, Phone, Mail, MapPin,
   Camera, FileText, User, Image, AlertCircle, Save, X,
   Upload, Check, BookOpen, Users, Heart, Shield, GraduationCap,
-  Calendar, Hash, CheckCircle2, XCircle, Printer,
+  Calendar, Hash, CheckCircle2, XCircle, Printer, Menu,
 } from 'lucide-react';
 import type { Student } from '../../types/student';
 import { SiblingsSection } from './SiblingsSection';
@@ -46,6 +46,7 @@ export function StudentDetailsModal({ student, allStudents, onClose, onEdit, onD
   const [editIss, setEditIss] = useState(false);
   const [issVal, setIssVal] = useState(current.issNumber ?? '');
   const [savingIss, setSavingIss] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const savePartial = async (patch: Partial<Omit<Student, 'id'>>) => {
     const payload = { ...current, ...patch };
@@ -80,32 +81,64 @@ export function StudentDetailsModal({ student, allStudents, onClose, onEdit, onD
     <div className="fixed inset-0 z-50 flex flex-col bg-slate-100" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
 
       {/* ── Barre supérieure ── */}
-      <header className="flex-shrink-0 bg-white border-b border-slate-200 px-5 py-2.5 flex items-center gap-3 shadow-sm print:hidden">
+      <header className="flex-shrink-0 bg-white border-b border-slate-200 px-3 sm:px-5 py-2.5 flex items-center gap-2 sm:gap-3 shadow-sm print:hidden">
+        {/* Burger mobile */}
+        <button
+          onClick={() => setSidebarOpen(true)}
+          className="lg:hidden p-1.5 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+        >
+          <Menu size={18} />
+        </button>
         <button
           onClick={onClose}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-slate-600 rounded-lg hover:bg-slate-100 transition-colors"
+          className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-sm text-slate-600 rounded-lg hover:bg-slate-100 transition-colors"
         >
-          <ArrowLeft size={15} /> Retour
+          <ArrowLeft size={15} /> <span className="hidden sm:inline">Retour</span>
         </button>
-        <div className="h-5 w-px bg-slate-200" />
-        <span className="text-sm text-slate-400 hidden sm:block">
+        <div className="h-5 w-px bg-slate-200 hidden sm:block" />
+        <span className="text-sm text-slate-400 hidden sm:block truncate">
           {current.firstName} <span className="uppercase font-semibold text-slate-600">{current.lastName}</span>
         </span>
-        <div className="flex-1" />
+        {/* Nom compact sur mobile */}
+        <span className="text-sm font-semibold text-slate-700 lg:hidden flex-1 truncate">
+          {current.firstName} {current.lastName.toUpperCase()}
+        </span>
+        <div className="flex-1 hidden lg:block" />
         <button
           onClick={() => onDelete(current)}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-red-500 border border-red-200 rounded-lg hover:bg-red-50 transition-colors"
+          className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-sm text-red-500 border border-red-200 rounded-lg hover:bg-red-50 transition-colors flex-shrink-0"
         >
-          <Trash2 size={13} /> Supprimer
+          <Trash2 size={13} /> <span className="hidden sm:inline">Supprimer</span>
         </button>
       </header>
 
       {/* ── Corps principal ── */}
-      <div className="flex flex-1 min-h-0 overflow-hidden">
+      <div className="flex flex-1 min-h-0 overflow-hidden relative">
+
+        {/* Backdrop mobile */}
+        {sidebarOpen && (
+          <div
+            className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
 
         {/* ════════════════ SIDEBAR ════════════════ */}
-        <aside className="w-72 flex-shrink-0 flex flex-col overflow-y-auto"
-          style={{ background: 'linear-gradient(160deg, #1e3a5f 0%, #1e2d4f 50%, #0f172a 100%)' }}>
+        <aside
+          className={`
+            fixed inset-y-0 left-0 z-50 flex flex-col overflow-y-auto w-72 transition-transform duration-300
+            lg:relative lg:translate-x-0 lg:z-auto lg:flex-shrink-0
+            ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+          `}
+          style={{ background: 'linear-gradient(160deg, #1e3a5f 0%, #1e2d4f 50%, #0f172a 100%)' }}
+        >
+          {/* Bouton fermer (mobile only) */}
+          <button
+            onClick={() => setSidebarOpen(false)}
+            className="lg:hidden absolute top-3 right-3 p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white/60 transition-colors z-10"
+          >
+            <X size={16} />
+          </button>
 
           {/* ── Avatar + identité ── */}
           <div className="flex flex-col items-center pt-8 pb-6 px-5 border-b border-white/10">
@@ -248,9 +281,47 @@ export function StudentDetailsModal({ student, allStudents, onClose, onEdit, onD
         </aside>
 
         {/* ════════════════ CONTENU PRINCIPAL ════════════════ */}
-        <main className="flex-1 flex flex-col overflow-hidden bg-slate-50">
-          {/* Bandeau titre */}
-          <div className="flex-shrink-0 bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between shadow-sm">
+        <main className="flex-1 flex flex-col overflow-hidden bg-slate-50 min-w-0">
+
+          {/* ── Profil compact mobile (visible uniquement < lg) ── */}
+          <div className="lg:hidden flex-shrink-0 flex items-center gap-3 px-4 py-3 bg-white border-b border-slate-200">
+            <div className="w-10 h-10 rounded-full overflow-hidden bg-indigo-800 flex items-center justify-center flex-shrink-0 ring-2 ring-indigo-200">
+              {current.photoUrl
+                ? <img src={current.photoUrl} alt="" className="w-full h-full object-cover" />
+                : <span className="text-sm font-bold text-white">{initials}</span>}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-slate-800 truncate">{current.firstName} {current.lastName.toUpperCase()}</p>
+              <p className="text-xs text-slate-400">{current.grade} · {current.schoolYear}</p>
+            </div>
+            <div className={`text-xs font-bold px-2 py-0.5 rounded-full ${score === 100 ? 'bg-emerald-100 text-emerald-700' : score >= 60 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-600'}`}>
+              {score}%
+            </div>
+          </div>
+
+          {/* ── Tabs horizontaux scrollables (mobile only) ── */}
+          <div className="lg:hidden flex-shrink-0 flex overflow-x-auto bg-white border-b border-slate-200 scrollbar-hide">
+            {TABS.map(tab => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                className={`flex-shrink-0 flex flex-col items-center gap-0.5 px-3 py-2 text-xs font-medium border-b-2 transition-colors relative ${
+                  activeTab === tab.key
+                    ? 'border-indigo-600 text-indigo-600'
+                    : 'border-transparent text-slate-500'
+                }`}
+              >
+                {tab.icon}
+                <span className="whitespace-nowrap">{tab.label}</span>
+                {tab.key === 'documents' && score < 100 && (
+                  <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
+                )}
+              </button>
+            ))}
+          </div>
+
+          {/* ── Bandeau titre desktop ── */}
+          <div className="hidden lg:flex flex-shrink-0 bg-white border-b border-slate-200 px-6 py-3 items-center justify-between shadow-sm">
             <div>
               <h2 className="text-base font-bold text-slate-800">
                 {TABS.find(t => t.key === activeTab)?.label}
@@ -259,14 +330,9 @@ export function StudentDetailsModal({ student, allStudents, onClose, onEdit, onD
                 {current.firstName} {current.lastName.toUpperCase()} · {current.grade}
               </p>
             </div>
-            <div className="flex items-center gap-2">
-              {(activeTab === 'adresse' || activeTab === 'parents') && (
-                <span className="text-xs text-slate-400 italic">Cliquez sur Modifier pour éditer</span>
-              )}
-            </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-6">
+          <div className="flex-1 overflow-y-auto p-3 sm:p-4 lg:p-6">
             {activeTab === 'classe'    && <TabClasse student={current} onGenerate={setDocPreview} />}
             {activeTab === 'adresse'   && <TabAdresse student={current} onSave={p => savePartial(p)} />}
             {activeTab === 'parents'   && <TabParents student={current} onSave={p => savePartial(p)} />}
