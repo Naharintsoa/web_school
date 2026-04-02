@@ -2,6 +2,7 @@
  * Routes élèves — CRUD complet + gestion des fratries
  */
 import { Router } from 'express';
+import bcrypt from 'bcryptjs';
 import { pool } from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
 
@@ -153,6 +154,50 @@ router.delete('/:id', async (req, res) => {
   } catch (err) {
     console.error('Erreur suppression élève:', err);
     return res.status(500).json({ message: 'Erreur serveur.' });
+  }
+});
+
+// ─── POST /purge-all ──────────────────────────────────────────────────────────
+// Supprime TOUS les élèves (et leurs notes en cascade).
+// Réservé au super admin — vérifie le mot de passe avant d'exécuter.
+router.post('/purge-all', async (req, res) => {
+  // 1. Seul le super admin peut déclencher cette action
+  if (!req.user?.isSuperAdmin) {
+    return res.status(403).json({ message: 'Action réservée au Super Administrateur.' });
+  }
+
+  const { password } = req.body;
+  if (!password) {
+    return res.status(400).json({ message: 'Mot de passe requis.' });
+  }
+
+  try {
+    // 2. Récupérer le hash du super admin depuis la DB
+    const { rows } = await pool.query(
+      'SELECT password_hash FROM users WHERE id = $1 AND is_super_admin = TRUE',
+      [req.user.userId]
+    );
+    if (rows.length === 0) {
+      return res.status(403).json({ message: 'Compte super admin introuvable.' });
+    }
+
+    // 3. Vérifier le mot de passe
+    const valid = await bcrypt.compare(password, rows[0].password_hash);
+    if (!valid) {
+      return res.status(401).json({ message: 'Mot de passe incorrect.' });
+    }
+
+    // 4. Compter les élèves avant suppression
+    const { rows: countRows } = await pool.query('SELECT COUNT(*) AS total FROM students');
+    const total = parseInt(countRows[0].total, 10);
+
+    // 5. Supprimer tous les élèves (grades supprimés en CASCADE via FK)
+    await pool.query('DELETE FROM students');
+
+    return res.json({ deleted: total, message: `${total} élève(s) supprimé(s) avec succès.` });
+  } catch (err) {
+    console.error('Erreur purge-all:', err);
+    return res.status(500).json({ message: 'Erreur serveur lors de la suppression.' });
   }
 });
 

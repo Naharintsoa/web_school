@@ -6,7 +6,7 @@ import React from 'react';
 import {
   Users, GraduationCap, ClipboardList, Settings,
   LogOut, BookOpen, Archive, Upload, KeyRound, Shield,
-  SlidersHorizontal, ChevronDown, ChevronRight, LayoutTemplate,
+  SlidersHorizontal, ChevronDown, ChevronRight, LayoutTemplate, Trash2,
 } from 'lucide-react';
 import { FR } from '../../constants/translations';
 import { useAuthContext } from '../../contexts/AuthContext';
@@ -46,6 +46,7 @@ export function Sidebar({ onNavigate, activePath, onLogout }: SidebarProps) {
   const visibleItems = MENU_ITEMS.filter(item => hasPermission(item.permission));
   const showAdmin = hasAnyPermission('admin:users', 'admin:roles');
   const showOptions = hasPermission('settings:view');
+  const showPurge = session?.isSuperAdmin === true;
 
   return (
     <div className="h-screen w-64 bg-indigo-900 text-white flex flex-col">
@@ -121,6 +122,21 @@ export function Sidebar({ onNavigate, activePath, onLogout }: SidebarProps) {
                   <span>Templates</span>
                   {activePath === '/options/templates' && <span className="ml-auto w-1.5 h-1.5 bg-white rounded-full" />}
                 </button>
+
+                {showPurge && (
+                  <button
+                    onClick={() => onNavigate('/options/purge')}
+                    className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                      activePath === '/options/purge'
+                        ? 'bg-rose-600 text-white shadow-sm'
+                        : 'text-indigo-300 hover:bg-rose-800 hover:text-white'
+                    }`}
+                  >
+                    <Trash2 size={15} className={activePath === '/options/purge' ? 'text-white' : 'text-rose-400'} />
+                    <span>Remise à zéro</span>
+                    {activePath === '/options/purge' && <span className="ml-auto w-1.5 h-1.5 bg-white rounded-full" />}
+                  </button>
+                )}
               </div>
             )}
           </>

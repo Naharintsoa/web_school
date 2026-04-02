@@ -17,6 +17,7 @@ import { ArchivePage } from './components/archive/ArchivePage';
 import { ImportPage } from './components/import/ImportPage';
 import { AdminPage } from './components/admin/AdminPage';
 import { TemplatesPage } from './components/options/TemplatesPage';
+import { PurgePage } from './components/options/PurgePage';
 import { NavigationContext } from './contexts/NavigationContext';
 
 function App() {
@@ -74,6 +75,8 @@ function App() {
           : <AccessDenied />;
       case '/options/templates':
         return hasPermission('settings:view') ? <TemplatesPage /> : <AccessDenied />;
+      case '/options/purge':
+        return hasPermission('settings:view') ? <PurgePage /> : <AccessDenied />;
       default:
         return <StudentList />;
     }
