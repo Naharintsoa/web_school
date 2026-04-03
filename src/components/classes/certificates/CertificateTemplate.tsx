@@ -48,9 +48,7 @@ export function CertificateTemplate({ type, student }: CertificateTemplateProps)
                           <em><strong>L'issue vers la réussite</strong></em><br />
                           <strong className="cert-school-name">COLLEGE PRIVE SULLY</strong><br />
                           <strong><em>Savoir être - Savoir - Savoir faire</em></strong><br />
-                          <em>
-                            Lot IV A 16 bis Ambodivonkely - Téléphone : 020 85 234 94 - sully.amb@moov.mg
-                          </em><br />
+                          <em>Lot IV A 16 bis Ambodivonkely - Tél : 020 85 234 94 - sully.amb@moov.mg</em><br />
                           <em>CISCO Antananarivo Ville - Code : 101 011 793 - ZAP VI</em><br />
                           <em>AO N° 036/2019 - DRENETP/ANALA/AO du 21/11/19</em>
                         </td>
@@ -111,92 +109,92 @@ export function CertificateTemplate({ type, student }: CertificateTemplateProps)
           align-items: flex-start;
           background: #f3f4f6;
           padding: 12px;
-          min-height: 100%;
           box-sizing: border-box;
         }
 
-        /* ── Bordure principale : double épaisse bleue ── */
+        /* ── Page 10 × 13 cm avec bordure double bleue ── */
         .page-border {
-          width: 190mm;
-          min-height: 277mm;
-          margin: 10mm auto;
-          padding: 10mm 12mm;
-          border: 8px double #2097bf;
+          width: 100mm;
+          height: 130mm;
+          padding: 5mm 6mm;
+          border: 5px double #2097bf;
           box-sizing: border-box;
           background: #fff;
           font-family: 'Times New Roman', Times, serif;
-          font-size: 13px;
+          font-size: 7px;
           display: flex;
           flex-direction: column;
           justify-content: space-between;
+          overflow: hidden;
         }
 
         /* ── En-tête ── */
         .cert-header-table {
           width: 100%;
-          margin-bottom: 6px;
-          font-size: 11px;
+          margin-bottom: 2px;
+          font-size: 5.5px;
         }
 
         .cert-header-cell {
           text-align: center;
           background-color: #d9d9d9;
-          padding: 5px 8px;
+          padding: 2px 3px;
         }
 
         .cert-logo-cell {
-          width: 80px;
+          width: 30px;
           vertical-align: middle;
         }
 
         .cert-logo-img {
-          width: 70px;
-          height: 70px;
+          width: 26px;
+          height: 26px;
           object-fit: contain;
         }
 
         .cert-school-text {
           text-align: center;
           vertical-align: middle;
-          line-height: 1.4;
-          padding-left: 6px;
+          line-height: 1.3;
+          padding-left: 3px;
         }
 
         .cert-school-name {
           color: #09448a;
-          font-size: 15px;
+          font-size: 7px;
         }
 
         /* ── Titre ── */
         .cert-title-block {
           text-align: center;
-          margin: 10px 0;
+          margin: 2px 0;
         }
 
         .cert-title-text {
           color: #09448a;
-          font-size: 14px;
-          letter-spacing: 0.5px;
+          font-size: 7px;
+          letter-spacing: 0.3px;
           text-transform: uppercase;
         }
 
         /* ── Corps ── */
         .cert-body {
           flex: 1;
+          overflow: hidden;
         }
 
         .cert-intro {
-          font-size: 13px;
-          line-height: 1.6;
-          margin: 0 0 6px;
+          font-size: 6.5px;
+          line-height: 1.4;
+          margin: 0 0 2px;
         }
 
         .cert-list {
           list-style-type: disc;
-          padding-left: 40px;
-          font-size: 14px;
-          line-height: 1.75;
-          margin: 0 0 10px;
+          padding-left: 12px;
+          font-size: 6.5px;
+          line-height: 1.55;
+          margin: 0 0 2px;
         }
 
         .value-blue {
@@ -205,43 +203,42 @@ export function CertificateTemplate({ type, student }: CertificateTemplateProps)
         }
 
         .cert-closing {
-          font-size: 14px;
+          font-size: 6.5px;
           margin: 0;
-          line-height: 1.6;
+          line-height: 1.4;
         }
 
         /* ── Signature ── */
         .cert-signature {
           text-align: right;
-          font-size: 12px;
-          margin-top: 10mm;
+          font-size: 6px;
         }
 
         .cert-sig-date {
-          margin: 0 0 4px;
+          margin: 0 0 1px;
         }
 
         .cert-sig-space {
-          height: 45px;
+          height: 12px;
         }
 
         .cert-sig-name {
-          margin: 0 30px 0 0;
-          font-size: 13px;
+          margin: 0 6px 0 0;
+          font-size: 6.5px;
         }
 
         /* ── Impression ── */
         @media print {
           @page {
-            size: A4 portrait;
+            size: 100mm 130mm;
             margin: 0;
           }
 
           html, body {
             margin: 0;
             padding: 0;
-            width: 210mm;
-            height: 297mm;
+            width: 100mm;
+            height: 130mm;
           }
 
           .cert-wrap {
@@ -250,10 +247,8 @@ export function CertificateTemplate({ type, student }: CertificateTemplateProps)
           }
 
           .page-border {
-            width: 190mm;
-            min-height: 277mm;
-            margin: 10mm auto;
-            border: 8px double #2097bf;
+            width: 100mm;
+            height: 130mm;
           }
         }
       `}</style>

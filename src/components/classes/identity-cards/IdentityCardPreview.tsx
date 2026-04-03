@@ -78,7 +78,7 @@ export function IdentityCardPreview({ students, onClose }: IdentityCardPreviewPr
                       <td style={{ width: '50%', padding: '2mm', verticalAlign: 'top' }}>
                         {right
                           ? <IdentityCardTemplate student={right} />
-                          : <div style={{ width: '86mm', height: '54mm' }} />}
+                          : <div style={{ width: '98mm', minHeight: '135mm' }} />}
                       </td>
                     </tr>
                   ))}
