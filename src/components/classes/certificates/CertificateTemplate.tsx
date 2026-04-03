@@ -1,4 +1,3 @@
-import React from 'react';
 import type { Student } from '../../../types';
 import { useSchoolYear } from '../../../contexts/SchoolYearContext';
 
@@ -47,161 +46,131 @@ export function CertificateTemplate({ type, student }: CertificateTemplateProps)
   return (
     <div className="certificate-container">
       <div className="page">
-        <div className="subpage">
+        <div className="page-inner">
           {/* En-tête */}
-          <div className="content">
-            <CertificateHeader />
+          <CertificateHeader />
 
-            {/* Titre */}
-            <p className="text-center font-bold text-xs text-[#09438a] mt-2 head2">
-              {type === 'radiation' ? 'CERTIFICAT DE RADIATION' : 'CERTIFICAT DE SCOLARITE'} {currentYear}
+          {/* Ligne de séparation */}
+          <hr className="border-[#09438a] border-t-2 my-3" />
+
+          {/* Titre */}
+          <p className="text-center font-bold text-[14px] text-[#09438a] mt-4 mb-6 tracking-wide uppercase">
+            {type === 'radiation' ? 'Certificat de Radiation' : 'Certificat de Scolarité'} — {currentYear}
+          </p>
+
+          {/* Introduction (Directrice) */}
+          <div className="intro mt-2 px-[40px]">
+            <p className="font-serif text-[12px]">
+              Je soussignée, <strong>RAMANANIRAINY Norotahiana</strong>, Directrice nominale de l'école SULLY,
+              certifie sur l'honneur que l'élève :
             </p>
+          </div>
 
-            {/* Introduction (Directrice) */}
-            <div className="intro mt-4 ml-[50px]">
-              <p className="font-serif text-[12px] font-tahoma">
-                Je soussignée, <strong>RAMANANIRAINY Norotahiana</strong>, Directrice nominale de l'école SULLY, certifie sur l'honneur que l'élève :
-              </p>
+          {/* Corps du certificat */}
+          <div className="mt-5 px-[60px]">
+            <ul className="list-disc pl-6 text-[12px] space-y-1">
+              <li><strong>Nom :</strong> {student.lastName}</li>
+              <li><strong>Prénoms :</strong> {student.firstName}</li>
+              <li><strong>Né(e) le :</strong> {new Date(student.dateOfBirth).toLocaleDateString('fr-FR')}</li>
+              <li><strong>À :</strong> Antananarivo</li>
+              <li><strong>Fils/Fille de :</strong> {student.parentInfo.fatherName}</li>
+              <li><strong>Et de :</strong> {student.parentInfo.motherName}</li>
+            </ul>
+
+            <div className="mt-5 space-y-2 text-[12px]">
+              <p><strong>Est élève dans mon établissement</strong></p>
+              <p><strong>Depuis le :</strong> {new Date(student.enrollmentDate).toLocaleDateString('fr-FR')}</p>
+              <p><strong>Classe actuelle :</strong> {student.grade}</p>
+              <p><strong>Numéro matricule :</strong> {student.matricule}</p>
             </div>
 
-            {/* Corps du certificat */}
-            <div className="content mt-4 ml-[50px]">
-              <ul className="list-disc pl-6 text-[12px] font-tahoma">
-                <li><strong>Nom :</strong> {student.lastName}</li>
-                <li><strong>Prénoms :</strong> {student.firstName}</li>
-                <li><strong>Né(e) le :</strong> {new Date(student.dateOfBirth).toLocaleDateString('fr-FR')}</li>
-                <li><strong>A :</strong> Antananarivo</li>
-                <li><strong>Fille de :</strong> {student.parentInfo.fatherName}</li>
-                <li><strong>Et de :</strong> {student.parentInfo.motherName}</li>
-              </ul>
+            <p className="text-center mt-8 text-[12px] font-serif italic">
+              Ce certificat lui est délivré pour servir et valoir ce que de droit.
+            </p>
+          </div>
 
-              {/* Lignes sans balise <li> */}
-              <p className="text-[12px] font-tahoma">
-                <strong>Est élève dans mon établissement</strong>
-              </p>
-              <p className="text-[12px] font-tahoma">
-                <strong>Depuis le :</strong> {new Date(student.enrollmentDate).toLocaleDateString('fr-FR')}
-              </p>
-              <p className="text-[12px] font-tahoma">
-                <strong>Classe actuelle :</strong> {student.grade}
-              </p>
-              <p className="text-[12px] font-tahoma">
-                <strong>Numéro matricule :</strong> {student.matricule}
-              </p>
-
-              <p className="text-center mt-4 text-[12px] font-serif font-tahoma">
-                Ce certificat lui est délivré pour servir et valoir ce que de droit.
-              </p>
-            </div>
-
-            {/* Signature */}
-            <div className="text-right mr-[20px]">
-              <p className="text-[10px] font-tahoma">Antananarivo, le {today}</p>
-              <p className="mt-[40px] text-[12px] font-semibold font-tahoma">RAMANANIRAINY Norotahiana</p>
-            </div>
+          {/* Signature — poussée vers le bas */}
+          <div className="signature-block">
+            <p className="text-[11px]">Antananarivo, le {today}</p>
+            <p className="mt-[50px] text-[12px] font-semibold">RAMANANIRAINY Norotahiana</p>
+            <p className="text-[10px] italic text-gray-600">Directrice</p>
           </div>
         </div>
       </div>
 
-      {/* Suppression des flèches de défilement en mode impression */}
-      <style>
-        {`
-          @media print {
-            body, html {
-              overflow: hidden;
-            }
-            .certificate-container {
-              margin: 25px;
-              background-color: white; /* Ajout du fond blanc autour de la bordure */
-            }
+      <style>{`
+        .certificate-container {
+          display: flex;
+          justify-content: center;
+          align-items: flex-start;
+          background: #e5e7eb;
+          padding: 16px;
+          min-height: 100%;
+          box-sizing: border-box;
+        }
 
-            .page {
-              page-break-before: always;
-              width: 20cm;  /* Largeur 20 cm */
-              height: 14cm; /* Hauteur 14 cm */
-              margin-top: 25px;  /* Espace de 25px en haut */
-              padding: 0;
-              box-sizing: border-box;
-              border: 5px solid #09438a;
-              border-radius: 10px;
-              background: #ffffff;
-            }
+        .page {
+          width: 210mm;
+          min-height: 297mm;
+          background: #ffffff;
+          border: 4px solid #09438a;
+          border-radius: 8px;
+          box-sizing: border-box;
+          display: flex;
+          flex-direction: column;
+        }
 
-            .subpage {
-              width: 100%;
-              height: 100%;
-              padding: 0;
-              margin: 0;
-              box-sizing: border-box;
-            }
+        .page-inner {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          padding: 12mm 15mm 10mm;
+          box-sizing: border-box;
+          min-height: 297mm;
+        }
 
-            .content {
-              font-size: 10px;
-              line-height: 1.4;
-              position: relative;
-              top: 0;
-            }
+        .signature-block {
+          margin-top: auto;
+          text-align: right;
+          padding-top: 20mm;
+        }
+
+        strong {
+          color: #09438a;
+        }
+
+        .content ul li strong {
+          color: #09438a;
+        }
+
+        @media print {
+          @page {
+            size: A4 portrait;
+            margin: 0;
+          }
+
+          body, html {
+            overflow: hidden !important;
           }
 
           .certificate-container {
-            margin: 25px;
-            background-color: white; /* Fond blanc autour du certificat */
+            background: none;
+            padding: 0;
           }
 
           .page {
-            width: 20cm; /* Largeur 20 cm */
-            height: 12cm; /* Hauteur 14 cm */
-            border: 5px solid #09438a;
-            border-radius: 10px;
-            background: #ffffff;
-            padding: 0;
-            box-sizing: border-box;
-            margin: 0;
+            width: 210mm;
+            min-height: 297mm;
+            border: 4px solid #09438a;
+            border-radius: 8px;
+            page-break-after: always;
           }
 
-          .subpage {
-            padding: 0;
-            height: 100%;
-            position: relative;
+          .page-inner {
+            min-height: 297mm;
           }
-
-          .head2 h1 {
-            font-size: 12px;
-            font-family: "Times New Roman", serif;
-            color: #09438a;
-          }
-
-          .date {
-            position: relative;
-            top: 20px;
-            text-align: right;
-          }
-
-          ul {
-            margin: 0;
-            padding-left: 1cm;
-            font-size: 12px;
-            line-height: 1.3;
-          }
-
-          .list-disc {
-            margin-top: 5px;
-          }
-
-          .text-center {
-            text-align: center;
-          }
-
-          strong {
-            color: #09438a;
-          }
-
-          /* Appliquer la couleur bleue à toutes les données (nom, prénoms, etc.) */
-          .content ul li strong {
-            color: #09438a;
-          }
-        `}
-      </style>
+        }
+      `}</style>
     </div>
   );
 }

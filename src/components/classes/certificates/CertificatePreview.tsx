@@ -38,7 +38,7 @@ export function CertificatePreview({ type, student, onClose }: CertificatePrevie
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 print:bg-white print:items-start overflow-y-auto py-4 px-2 sm:py-6 sm:items-center">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl overflow-hidden print:shadow-none print:rounded-none print:max-w-none">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-5xl overflow-hidden print:shadow-none print:rounded-none print:max-w-none">
         {/* Barre d'outils - cachée à l'impression */}
         <div className="p-3 sm:p-4 border-b border-gray-200 flex justify-between items-center print:hidden">
           <h3 className="text-lg font-medium text-gray-900">
@@ -102,15 +102,13 @@ export function CertificatePreview({ type, student, onClose }: CertificatePrevie
               />
             </div>
           )}
-          {/* Wrapper zoom sur mobile : le certificat A4 est affiché à échelle réduite */}
-          <div className="overflow-x-auto print:overflow-visible">
-            <div className="min-w-[320px] print:min-w-0">
-              <CertificateTemplate
-                type={type}
-                student={student}
-                customText={customText || undefined}
-              />
-            </div>
+          {/* Aperçu A4 — scroll vertical uniquement, pas de scroll horizontal */}
+          <div className="overflow-x-hidden print:overflow-visible">
+            <CertificateTemplate
+              type={type}
+              student={student}
+              customText={customText || undefined}
+            />
           </div>
         </div>
       </div>
