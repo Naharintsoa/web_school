@@ -79,7 +79,8 @@ router.get('/', async (req, res) => {
     let query = 'SELECT * FROM students';
     const params = [];
     if (year) {
-      query += ' WHERE school_year = $1';
+      // Inclure les élèves de l'année demandée ET ceux sans année (données historiques)
+      query += ' WHERE (school_year = $1 OR school_year IS NULL)';
       params.push(year);
     }
     query += ' ORDER BY last_name, first_name';
