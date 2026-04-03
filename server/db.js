@@ -104,6 +104,11 @@ export async function initDB() {
 
     // 1b. Migrations incrémentales (colonnes ajoutées après la création initiale)
     await client.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS family_id TEXT`);
+    await client.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS nationality TEXT`);
+    await client.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS birth_city TEXT`);
+    await client.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS birth_country TEXT`);
+    await client.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS exit_date TEXT`);
+    await client.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'actif'`);
 
     // 2. Insérer les rôles par défaut si la table est vide
     const { rows: existingRoles } = await client.query('SELECT id FROM roles LIMIT 1');

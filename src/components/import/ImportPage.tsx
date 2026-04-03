@@ -30,12 +30,30 @@ interface ParsedRow {
   matricule: string;
   lastName: string;
   firstName: string;
+  commonName: string;
   dateOfBirth: string;
   enrollmentDate: string;
+  exitDate: string;
   grade: string;
   schoolYear: string;
   genderRaw: string;
   studentNumber: string;
+  nationality: string;
+  birthCity: string;
+  birthCountry: string;
+  issNumber: string;
+  rowStatus: string;    // "statut" colonne Excel (actif/sorti/…)
+  address: string;
+  fatherName: string;
+  fatherAddress: string;
+  fatherOccupation: string;
+  fatherPhone: string;
+  fatherEmail: string;
+  motherName: string;
+  motherAddress: string;
+  motherOccupation: string;
+  motherPhone: string;
+  motherEmail: string;
   // Validation
   status: RowStatus;
   errors: string[];
@@ -149,6 +167,108 @@ const COL_SYNONYMS: Record<string, string> = {
   'f/g': 'gender',
   'f / g': 'gender',
   'sex': 'gender',
+
+  // ── Prénom usuel ──
+  'prénom usuel': 'commonName',
+  'prenom usuel': 'commonName',
+  'nom usuel': 'commonName',
+  'surnom': 'commonName',
+
+  // ── Nationalité ──
+  'nationalité': 'nationality',
+  'nationalite': 'nationality',
+
+  // ── Ville de naissance ──
+  'ville de naissance': 'birthCity',
+  'ville naissance': 'birthCity',
+  'lieu de naissance': 'birthCity',
+  'lieu naissance': 'birthCity',
+
+  // ── Pays de naissance ──
+  'pays de naissance': 'birthCountry',
+  'pays naissance': 'birthCountry',
+
+  // ── Date de sortie ──
+  'date de sortie': 'exitDate',
+  'date sortie': 'exitDate',
+  'date de radiation': 'exitDate',
+  'date dentree de radiation': 'exitDate',
+
+  // ── Numéro ISS ──
+  'numéro iss': 'issNumber',
+  'numero iss': 'issNumber',
+  'n° iss': 'issNumber',
+  'iss': 'issNumber',
+  'matricule iss': 'issNumber',
+
+  // ── Statut ──
+  'statut': 'status',
+  'état': 'status',
+  'etat': 'status',
+
+  // ── Adresse élève ──
+  'adresse': 'address',
+  'adresse élève': 'address',
+  'adresse elève': 'address',
+  'adresse eleve': 'address',
+
+  // ── Père ──
+  'nom du père': 'fatherName',
+  'nom du pere': 'fatherName',
+  'père': 'fatherName',
+  'pere': 'fatherName',
+  'nom père': 'fatherName',
+  'nom pere': 'fatherName',
+
+  'adresse du père': 'fatherAddress',
+  'adresse du pere': 'fatherAddress',
+  'adresse père': 'fatherAddress',
+  'adresse pere': 'fatherAddress',
+
+  'profession du père': 'fatherOccupation',
+  'profession du pere': 'fatherOccupation',
+  'profession père': 'fatherOccupation',
+  'profession pere': 'fatherOccupation',
+
+  'téléphone père': 'fatherPhone',
+  'telephone père': 'fatherPhone',
+  'telephone pere': 'fatherPhone',
+  'tél père': 'fatherPhone',
+  'tel pere': 'fatherPhone',
+
+  'email père': 'fatherEmail',
+  'email pere': 'fatherEmail',
+  'mail père': 'fatherEmail',
+  'mail pere': 'fatherEmail',
+
+  // ── Mère ──
+  'nom de la mère': 'motherName',
+  'nom de la mere': 'motherName',
+  'mère': 'motherName',
+  'mere': 'motherName',
+  'nom mère': 'motherName',
+  'nom mere': 'motherName',
+
+  'adresse de la mère': 'motherAddress',
+  'adresse de la mere': 'motherAddress',
+  'adresse mère': 'motherAddress',
+  'adresse mere': 'motherAddress',
+
+  'profession de la mère': 'motherOccupation',
+  'profession de la mere': 'motherOccupation',
+  'profession mère': 'motherOccupation',
+  'profession mere': 'motherOccupation',
+
+  'téléphone mère': 'motherPhone',
+  'telephone mère': 'motherPhone',
+  'telephone mere': 'motherPhone',
+  'tél mère': 'motherPhone',
+  'tel mere': 'motherPhone',
+
+  'email mère': 'motherEmail',
+  'email mere': 'motherEmail',
+  'mail mère': 'motherEmail',
+  'mail mere': 'motherEmail',
 };
 
 // ─── Utilitaires ──────────────────────────────────────────────────────────────
@@ -279,15 +399,33 @@ export function ImportPage() {
     const parsed: ParsedRow[] = (raw.slice(1) as unknown[][])
       .filter(r => (r as unknown[]).some(c => String(c).trim() !== ''))
       .map((r, i) => {
-        const matricule      = getCell(r, 'matricule');
-        const lastName       = getCell(r, 'lastName');
-        const firstName      = getCell(r, 'firstName');
-        const dateOfBirthRaw = getCell(r, 'dateOfBirth');
-        const enrollDateRaw  = getCell(r, 'enrollmentDate');
-        const gradeRaw       = getCell(r, 'grade');
-        const schoolYearRaw  = getCell(r, 'schoolYear');
-        const genderRaw      = getCell(r, 'gender');
-        const studentNumber  = getCell(r, 'studentNumber');
+        const matricule        = getCell(r, 'matricule');
+        const lastName         = getCell(r, 'lastName');
+        const firstName        = getCell(r, 'firstName');
+        const commonName       = getCell(r, 'commonName');
+        const dateOfBirthRaw   = getCell(r, 'dateOfBirth');
+        const enrollDateRaw    = getCell(r, 'enrollmentDate');
+        const exitDateRaw      = getCell(r, 'exitDate');
+        const gradeRaw         = getCell(r, 'grade');
+        const schoolYearRaw    = getCell(r, 'schoolYear');
+        const genderRaw        = getCell(r, 'gender');
+        const studentNumber    = getCell(r, 'studentNumber');
+        const nationality      = getCell(r, 'nationality');
+        const birthCity        = getCell(r, 'birthCity');
+        const birthCountry     = getCell(r, 'birthCountry');
+        const issNumber        = getCell(r, 'issNumber');
+        const rowStatus        = getCell(r, 'status');
+        const address          = getCell(r, 'address');
+        const fatherName       = getCell(r, 'fatherName');
+        const fatherAddress    = getCell(r, 'fatherAddress');
+        const fatherOccupation = getCell(r, 'fatherOccupation');
+        const fatherPhone      = getCell(r, 'fatherPhone');
+        const fatherEmail      = getCell(r, 'fatherEmail');
+        const motherName       = getCell(r, 'motherName');
+        const motherAddress    = getCell(r, 'motherAddress');
+        const motherOccupation = getCell(r, 'motherOccupation');
+        const motherPhone      = getCell(r, 'motherPhone');
+        const motherEmail      = getCell(r, 'motherEmail');
 
         const errors: string[] = [];
         let mappedGrade: GradeType | undefined;
@@ -323,12 +461,30 @@ export function ImportPage() {
           matricule,
           lastName,
           firstName,
+          commonName,
           dateOfBirth: normalizeDate(dateOfBirthRaw),
           enrollmentDate: normalizeDate(enrollDateRaw),
+          exitDate: normalizeDate(exitDateRaw),
           grade: gradeRaw,
           schoolYear: schoolYearRaw,
           genderRaw,
           studentNumber,
+          nationality,
+          birthCity,
+          birthCountry,
+          issNumber,
+          rowStatus,
+          address,
+          fatherName,
+          fatherAddress,
+          fatherOccupation,
+          fatherPhone,
+          fatherEmail,
+          motherName,
+          motherAddress,
+          motherOccupation,
+          motherPhone,
+          motherEmail,
           status: errors.length === 0 ? 'valid' : 'error',
           errors,
           mappedGrade,
@@ -408,15 +564,30 @@ export function ImportPage() {
           matricule: matriculeFinal,
           firstName: row.firstName,
           lastName: row.lastName.toUpperCase(),
-          commonName: undefined,
+          commonName: row.commonName || undefined,
           dateOfBirth: row.dateOfBirth || '',
           gender: row.mappedGender ?? 'male',
+          nationality: row.nationality || undefined,
+          birthCity: row.birthCity || undefined,
+          birthCountry: row.birthCountry || undefined,
           grade: row.mappedGrade!,
           cycle: GRADE_TO_CYCLE[row.mappedGrade!],
+          issNumber: row.issNumber || undefined,
+          exitDate: row.exitDate || undefined,
+          status: row.rowStatus || 'actif',
           parentInfo: {
-            fatherName: '', fatherOccupation: '', fatherPhone: '',
-            motherName: '', motherOccupation: '', motherPhone: '',
-            email: '', address: '',
+            fatherName: row.fatherName || '',
+            fatherOccupation: row.fatherOccupation || '',
+            fatherPhone: row.fatherPhone || '',
+            fatherEmail: row.fatherEmail || undefined,
+            fatherAddress: row.fatherAddress || undefined,
+            motherName: row.motherName || '',
+            motherOccupation: row.motherOccupation || '',
+            motherPhone: row.motherPhone || '',
+            motherEmail: row.motherEmail || undefined,
+            motherAddress: row.motherAddress || undefined,
+            email: '',
+            address: row.address || '',
           },
           enrollmentDate: row.enrollmentDate || today,
           schoolYear: row.schoolYear || currentYear,
@@ -449,14 +620,20 @@ export function ImportPage() {
 
   const downloadTemplate = useCallback(async () => {
     const XLSX = await import('xlsx');
-    const headers = ['Numéro mat', 'Nom', 'Prénom', 'Date de naissance', "Date d'entrée", 'Classe', 'Année scolaire', 'F/G'];
+    const headers = [
+      'Classe', 'Année scolaire', 'Nom', 'Prénom', 'Prénom usuel', 'Matricule', 'Sexe',
+      'Date de naissance', 'Nationalité', 'Ville de naissance', 'Pays de naissance',
+      "Date d'entrée", 'Date de sortie', 'Numéro ISS', 'Statut', 'Adresse',
+      'Nom du père', 'Adresse du père', 'Profession du père', 'Téléphone père', 'Email père',
+      'Nom de la mère', 'Adresse de la mère', 'Profession de la mère', 'Téléphone mère', 'Email mère',
+    ];
     const examples = [
-      [1042, 'DUPONT', 'Jean', '15/03/2010', '01/09/2024', '6EME', '2024-2025', 'G'],
-      [1017, 'MARTIN', 'Marie', '22/07/2011', '01/09/2024', '5EME', '2024-2025', 'F'],
-      ['',   'BENALI', 'Youssef', '08/11/2012', '01/09/2024', 'CM2', '2024-2025', 'G'],
+      ['6EME', '2024-2025', 'DUPONT', 'Jean', 'Jeannot', '1042', 'G', '15/03/2010', 'Malagasy', 'Antananarivo', 'Madagascar', '01/09/2024', '', 'ISS-001', 'actif', 'Lot IV Ambohipo', 'DUPONT Pierre', 'Ambohipo', 'Médecin', '034 00 001 01', 'pierre@mail.mg', 'RABE Marie', 'Ambohipo', 'Enseignante', '033 00 002 02', 'marie@mail.mg'],
+      ['5EME', '2024-2025', 'MARTIN', 'Marie', '', '1017', 'F', '22/07/2011', 'Malagasy', 'Antsirabe', 'Madagascar', '01/09/2024', '', 'ISS-002', 'actif', 'Lot V Ankadivato', 'MARTIN Paul', 'Ankadivato', 'Comptable', '034 00 003 03', '', 'RAKOTON Chantal', 'Ankadivato', 'Commerçante', '033 00 004 04', ''],
+      ['CM2', '2024-2025', 'BENALI', 'Youssef', '', '', 'G', '08/11/2012', 'Comorienne', 'Moroni', 'Comores', '01/09/2024', '', '', 'actif', 'Rue des Fleurs', 'BENALI Ahmed', '', 'Ingénieur', '034 00 005 05', '', 'SAID Fatima', '', 'Sans emploi', '033 00 006 06', ''],
     ];
     const ws = XLSX.utils.aoa_to_sheet([headers, ...examples]);
-    ws['!cols'] = headers.map((_, i) => ({ wch: [14, 16, 14, 18, 14, 10, 14, 6][i] ?? 14 }));
+    ws['!cols'] = headers.map(() => ({ wch: 18 }));
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Élèves');
     XLSX.writeFile(wb, 'modele_import_eleves.xlsx');
@@ -603,52 +780,54 @@ export function ImportPage() {
                 </button>
               </div>
 
-              {/* Tableau exemple */}
-              <div className="overflow-x-auto px-5 py-4">
-                <table className="w-full text-xs border-collapse min-w-[680px]">
-                  <thead>
-                    <tr>
-                      {['Numéro mat', 'Nom', 'Prénom', 'Date de naissance', "Date d'entrée", 'Classe', 'Année scolaire'].map(h => (
-                        <th key={h} className="bg-slate-50 border border-slate-200 px-3 py-2.5 text-left font-semibold text-slate-600 whitespace-nowrap first:rounded-tl-lg last:rounded-tr-lg">
-                          {h}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td className="border border-slate-100 px-3 py-2 font-mono text-slate-500">1042</td>
-                      <td className="border border-slate-100 px-3 py-2 font-semibold text-slate-700">DUPONT</td>
-                      <td className="border border-slate-100 px-3 py-2 text-slate-600">Jean</td>
-                      <td className="border border-slate-100 px-3 py-2 text-slate-500">15/03/2010</td>
-                      <td className="border border-slate-100 px-3 py-2 text-slate-500">01/09/2024</td>
-                      <td className="border border-slate-100 px-3 py-2">
-                        <span className="bg-violet-100 text-violet-700 px-2 py-0.5 rounded-full text-xs font-semibold">6EME</span>
-                      </td>
-                      <td className="border border-slate-100 px-3 py-2 text-slate-500">2024-2025</td>
-                    </tr>
-                    <tr className="bg-slate-50/60">
-                      <td className="border border-slate-100 px-3 py-2 font-mono text-slate-500">1017</td>
-                      <td className="border border-slate-100 px-3 py-2 font-semibold text-slate-700">MARTIN</td>
-                      <td className="border border-slate-100 px-3 py-2 text-slate-600">Marie</td>
-                      <td className="border border-slate-100 px-3 py-2 text-slate-500">22/07/2011</td>
-                      <td className="border border-slate-100 px-3 py-2 text-slate-500">01/09/2024</td>
-                      <td className="border border-slate-100 px-3 py-2">
-                        <span className="bg-violet-100 text-violet-700 px-2 py-0.5 rounded-full text-xs font-semibold">5EME</span>
-                      </td>
-                      <td className="border border-slate-100 px-3 py-2 text-slate-500">2024-2025</td>
-                    </tr>
-                  </tbody>
-                </table>
+              {/* Colonnes du format */}
+              <div className="px-5 py-4">
+                <p className="text-xs font-semibold text-slate-600 mb-3">Colonnes reconnues (26 au total) :</p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                  {[
+                    { col: 'Classe', req: true },
+                    { col: 'Nom', req: true },
+                    { col: 'Prénom', req: true },
+                    { col: 'Année scolaire', req: false },
+                    { col: 'Prénom usuel', req: false },
+                    { col: 'Matricule', req: false },
+                    { col: 'Sexe', req: false },
+                    { col: 'Date de naissance', req: false },
+                    { col: 'Nationalité', req: false },
+                    { col: 'Ville de naissance', req: false },
+                    { col: 'Pays de naissance', req: false },
+                    { col: "Date d'entrée", req: false },
+                    { col: 'Date de sortie', req: false },
+                    { col: 'Numéro ISS', req: false },
+                    { col: 'Statut', req: false },
+                    { col: 'Adresse', req: false },
+                    { col: 'Nom du père', req: false },
+                    { col: 'Adresse du père', req: false },
+                    { col: 'Profession du père', req: false },
+                    { col: 'Téléphone père', req: false },
+                    { col: 'Email père', req: false },
+                    { col: 'Nom de la mère', req: false },
+                    { col: 'Adresse de la mère', req: false },
+                    { col: 'Profession de la mère', req: false },
+                    { col: 'Téléphone mère', req: false },
+                    { col: 'Email mère', req: false },
+                  ].map(({ col, req }) => (
+                    <div key={col} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-50 rounded-lg border border-slate-100">
+                      <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${req ? 'bg-violet-500' : 'bg-slate-300'}`} />
+                      <span className="text-xs text-slate-600 font-mono truncate">{col}</span>
+                      {req && <span className="ml-auto text-[10px] text-violet-500 font-semibold flex-shrink-0">requis</span>}
+                    </div>
+                  ))}
+                </div>
               </div>
 
               {/* Notes en grille */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-0 border-t border-slate-100">
                 {[
                   { title: 'Classes', body: VALID_GRADES.join(', ') },
-                  { title: 'Matricule', body: '4 chiffres exactement, sans tiret. Ex : 1017. Auto-généré si absent.' },
+                  { title: 'Matricule', body: '4 chiffres exactement. Ex : 1017. Auto-généré si absent.' },
                   { title: 'Dates', body: 'JJ/MM/AAAA ou AAAA-MM-JJ. Dates Excel natives reconnues.' },
-                  { title: 'Optionnels', body: 'Date de naissance, Date d\'entrée, Année scolaire, F/G sont facultatifs.' },
+                  { title: 'Optionnels', body: 'Seuls Classe, Nom et Prénom sont obligatoires. Toutes les autres colonnes sont facultatives.' },
                 ].map((note, i) => (
                   <div key={i} className={`px-4 py-3 text-xs ${i < 3 ? 'border-r border-slate-100' : ''}`}>
                     <p className="font-semibold text-slate-700 mb-1">{note.title}</p>

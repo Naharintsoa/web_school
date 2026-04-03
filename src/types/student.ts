@@ -13,10 +13,12 @@ export interface ParentInfo {
   fatherOccupation: string;
   fatherPhone: string;
   fatherEmail?: string;
+  fatherAddress?: string;
   motherName: string;
   motherOccupation: string;
   motherPhone: string;
   motherEmail?: string;
+  motherAddress?: string;
   email: string;
   address: string;
 }
@@ -30,10 +32,15 @@ export interface Student {
   commonName?: string;
   dateOfBirth: string;
   gender: Gender;
+  nationality?: string;
+  birthCity?: string;
+  birthCountry?: string;
   grade: Grade;
   cycle: Cycle;
   photoUrl?: string;
   issNumber?: string;
+  exitDate?: string;
+  status?: string;
   familyId?: string;
   parentInfo: ParentInfo;
   enrollmentDate: string;
