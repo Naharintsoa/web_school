@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import {
   ArrowLeft, Edit2, Trash2, Phone, Mail, MapPin,
-  Camera, FileText, User, Image, AlertCircle, Save, X,
+  Camera, FileText, User, Image, Save, X,
   Upload, Check, BookOpen, Users, Heart, Shield, GraduationCap,
   Calendar, Hash, CheckCircle2, XCircle, Printer, Menu,
 } from 'lucide-react';
@@ -368,6 +368,7 @@ export function StudentDetailsModal({ student, allStudents, onClose, onEdit, onD
                 student={current}
                 allStudents={allStudents}
                 onStudentUpdated={s => { if (s.id === current.id) setCurrent(s); }}
+                onOpenStudent={s => { onEdit(s); setActiveTab('classe'); }}
               />
             )}
             {activeTab === 'sante'     && <TabSante />}
