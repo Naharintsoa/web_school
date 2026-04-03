@@ -9,6 +9,7 @@ import { ClassStudentsList } from './ClassStudentsList';
 import { ClassDocumentsHub } from './documents/ClassDocumentsHub';
 import { studentApi } from '../../services/api';
 import { useNavigation } from '../../contexts/NavigationContext';
+import { useSchoolYear } from '../../contexts/SchoolYearContext';
 import { FR } from '../../constants/translations';
 
 interface ClassCardProps {
@@ -21,6 +22,7 @@ interface ClassCardProps {
 
 export function ClassCard({ grade, totalStudents, teachers, isSelected, onSelect }: ClassCardProps) {
   const { navigateToGrades } = useNavigation();
+  const { currentYear } = useSchoolYear();
   const [isOpen, setIsOpen] = useState(false);
   const [showStudents, setShowStudents] = useState(false);
   const [showDocumentsHub, setShowDocumentsHub] = useState(false);
@@ -39,7 +41,7 @@ export function ClassCard({ grade, totalStudents, teachers, isSelected, onSelect
   }, [isOpen]);
 
   const loadStudents = async () => {
-    const all = await studentApi.getAll();
+    const all = await studentApi.getAll(currentYear);
     setStudents(all.filter(s => s.grade === grade));
   };
 

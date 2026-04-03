@@ -73,9 +73,17 @@ function newFamilyId() {
   return 'family-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
 }
 
-router.get('/', async (_req, res) => {
+router.get('/', async (req, res) => {
   try {
-    const { rows } = await pool.query('SELECT * FROM students ORDER BY last_name, first_name');
+    const { year } = req.query;
+    let query = 'SELECT * FROM students';
+    const params = [];
+    if (year) {
+      query += ' WHERE school_year = $1';
+      params.push(year);
+    }
+    query += ' ORDER BY last_name, first_name';
+    const { rows } = await pool.query(query, params);
     return res.json(rows.map(rowToStudent));
   } catch (err) {
     console.error('Erreur récupération élèves:', err);

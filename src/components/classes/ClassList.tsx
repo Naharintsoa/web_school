@@ -4,15 +4,17 @@ import type { Grade, Student, Cycle } from '../../types';
 import { CYCLES } from '../../utils/cycles';
 import { CycleSection } from './CycleSection';
 import { studentApi } from '../../services/api';
+import { useSchoolYear } from '../../contexts/SchoolYearContext';
 import { FR } from '../../constants/translations';
 
 export function ClassList() {
+  const { currentYear } = useSchoolYear();
   const [students, setStudents] = React.useState<Student[]>([]);
   const [selectedGrade, setSelectedGrade] = React.useState<Grade | null>(null);
 
   React.useEffect(() => {
-    studentApi.getAll().then(setStudents);
-  }, []);
+    studentApi.getAll(currentYear).then(setStudents);
+  }, [currentYear]);
 
   return (
     <div className="space-y-6">

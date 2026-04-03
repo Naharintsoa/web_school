@@ -14,10 +14,12 @@ import { formatMatricule } from '../../utils/matricule';
 import { studentApi } from '../../services/api';
 import { archiveApi } from '../../services/archiveApi';
 import { useToast } from '../../contexts/ToastContext';
+import { useSchoolYear } from '../../contexts/SchoolYearContext';
 import { FR } from '../../constants/translations';
 
 export function StudentList() {
   const { showToast } = useToast();
+  const { currentYear } = useSchoolYear();
   const [students, setStudents] = useState<Student[]>([]);
   const [archivedStudents, setArchivedStudents] = useState<ArchivedStudent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -31,12 +33,12 @@ export function StudentList() {
   useEffect(() => {
     loadStudents();
     loadArchivedStudents();
-  }, []);
+  }, [currentYear]);
 
   const loadStudents = async () => {
     setIsLoading(true);
     try {
-      const data = await studentApi.getAll();
+      const data = await studentApi.getAll(currentYear);
       setStudents(data);
     } catch {
       showToast('Erreur lors du chargement des élèves', 'error');

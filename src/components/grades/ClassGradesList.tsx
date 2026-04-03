@@ -50,7 +50,7 @@ export function ClassGradesList({ grade, onBack }: ClassGradesListProps) {
     return '';
   })();
 
-  useEffect(() => { loadData(); }, [grade]);
+  useEffect(() => { loadData(); }, [grade, currentYear]);
 
   // S'abonner aux modifications de matières (ajout, suppression, édition)
   // → refresh automatique sans naviguer ailleurs
@@ -63,12 +63,12 @@ export function ClassGradesList({ grade, onBack }: ClassGradesListProps) {
 
   const loadData = useCallback(async () => {
     const [loadedStudents, loadedSubjects] = await Promise.all([
-      studentApi.getAll(),
+      studentApi.getAll(currentYear),
       subjectsApi.getAll(),
     ]);
     setStudents(loadedStudents.filter(s => s.grade === grade));
     setSubjects(loadedSubjects);
-  }, [grade]);
+  }, [grade, currentYear]);
 
   const handleSubjectsChange = async () => {
     const updated = await subjectsApi.getAll();
@@ -78,14 +78,14 @@ export function ClassGradesList({ grade, onBack }: ClassGradesListProps) {
   const loadGrades = useCallback(async (student: Student) => {
     const [studentGrades, allStudents, allGrades] = await Promise.all([
       gradesApi.getByStudent(student.id),
-      studentApi.getAll(),
+      studentApi.getAll(currentYear),
       gradesApi.getAll(),
     ]);
     setGrades(studentGrades);
 
     const classIds = new Set(allStudents.filter(s => s.grade === grade).map(s => s.id));
     setAllClassGrades(allGrades.filter(g => classIds.has(g.studentId) && g.term === selectedTerm));
-  }, [grade, selectedTerm]);
+  }, [grade, selectedTerm, currentYear]);
 
   const handleStudentSelect = async (student: Student) => {
     setSelectedStudent(student);

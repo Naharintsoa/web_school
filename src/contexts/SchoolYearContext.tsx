@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState } from 'react';
 
+const YEAR_KEY = 'sully-school-year';
+
 interface SchoolYearContextType {
   currentYear: string;
   setCurrentYear: (year: string) => void;
@@ -8,7 +10,14 @@ interface SchoolYearContextType {
 const SchoolYearContext = createContext<SchoolYearContextType | undefined>(undefined);
 
 export function SchoolYearProvider({ children }: { children: React.ReactNode }) {
-  const [currentYear, setCurrentYear] = useState('2024-2025');
+  const [currentYear, _setCurrentYear] = useState<string>(
+    () => localStorage.getItem(YEAR_KEY) ?? '2025-2026'
+  );
+
+  const setCurrentYear = (year: string) => {
+    localStorage.setItem(YEAR_KEY, year);
+    _setCurrentYear(year);
+  };
 
   return (
     <SchoolYearContext.Provider value={{ currentYear, setCurrentYear }}>

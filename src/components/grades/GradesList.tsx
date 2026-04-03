@@ -8,6 +8,7 @@ import { GraduationCap, Users } from 'lucide-react';
 import { CYCLES } from '../../utils/cycles';
 import { ClassGradesList } from './ClassGradesList';
 import { studentApi } from '../../services/api';
+import { useSchoolYear } from '../../contexts/SchoolYearContext';
 
 interface GradesListProps {
   /** Classe à présélectionner automatiquement (optionnel) */
@@ -17,6 +18,7 @@ interface GradesListProps {
 }
 
 export function GradesList({ initialGrade, onGradeSelected }: GradesListProps) {
+  const { currentYear } = useSchoolYear();
   const [selectedGrade, setSelectedGrade] = useState<string | null>(null);
   // Nombre d'élèves par classe pour l'affichage
   const [studentCounts, setStudentCounts] = useState<Record<string, number>>({});
@@ -31,14 +33,14 @@ export function GradesList({ initialGrade, onGradeSelected }: GradesListProps) {
 
   // Charger les compteurs d'élèves par classe
   useEffect(() => {
-    studentApi.getAll().then(students => {
+    studentApi.getAll(currentYear).then(students => {
       const counts: Record<string, number> = {};
       students.forEach(s => {
         counts[s.grade] = (counts[s.grade] ?? 0) + 1;
       });
       setStudentCounts(counts);
     });
-  }, []);
+  }, [currentYear]);
 
   if (selectedGrade) {
     return (
