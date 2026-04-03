@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Search } from 'lucide-react';
 import type { Student } from '../../types/student';
 import { StudentDetailsModal } from '../students/StudentDetailsModal';
-import { EditStudentModal } from '../students/EditStudentModal';
 import { ArchivedStudentsList } from '../archive/ArchivedStudentsList';
 import { CertificateModal } from './certificates/CertificateModal';
 import { StudentListHeader } from './students/StudentListHeader';
@@ -28,9 +27,6 @@ export function ClassStudentsList({ grade, students, onClose, onStudentsChange }
   const {
     currentStudents,
     archivedStudents,
-    editingStudent,
-    handleEdit,
-    handleSaveEdit,
     handleDelete,
     handleRestore,
     loadArchivedStudents
@@ -78,7 +74,7 @@ export function ClassStudentsList({ grade, students, onClose, onStudentsChange }
           <StudentListTable
             students={filteredStudents}
             onSelect={setSelectedStudent}
-            onEdit={handleEdit}
+            onEdit={setSelectedStudent}
             onDelete={handleDelete}
             onCertificateClick={handleCertificateClick}
           />
@@ -89,16 +85,8 @@ export function ClassStudentsList({ grade, students, onClose, onStudentsChange }
         <StudentDetailsModal
           student={selectedStudent}
           onClose={() => setSelectedStudent(null)}
-          onEdit={handleEdit}
+          onEdit={s => setSelectedStudent(s)}
           onDelete={handleDelete}
-        />
-      )}
-
-      {editingStudent && (
-        <EditStudentModal
-          student={editingStudent}
-          onSave={handleSaveEdit}
-          onClose={() => handleEdit(null)}
         />
       )}
 
