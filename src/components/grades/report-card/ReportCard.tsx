@@ -376,11 +376,19 @@ export function ReportCard({
                 {absences !== '' ? absences : '—'}
               </td>
               <td colSpan={5} rowSpan={3} style={{ ...S.cellC, fontSize: '8pt', verticalAlign: 'middle' }}>
-                {/* Matières non notées */}
-                {notedCount < Object.keys(classStats).length && notedCount > 0 && (
-                  <span style={{ color: '#666', fontSize: '7pt' }}>
-                    {Object.keys(classStats).length - notedCount} matière(s) non notée(s) — exclue(s) de la moyenne
-                  </span>
+                {/* Moyennes Brevet — 4ème et 3ème uniquement */}
+                {isBrevet && notedCount > 0 && (
+                  <div style={{ textAlign: 'left', lineHeight: '1.6' }}>
+                    {hasAnglais && (
+                      <div><strong>Moy. Brevet Anglais :</strong> {formatScore(moyBrevAnglais)}</div>
+                    )}
+                    {hasEspagnol && (
+                      <div><strong>Moy. Brevet Espagnol :</strong> {formatScore(moyBrevEspagnol)}</div>
+                    )}
+                    {hasAllemand && (
+                      <div><strong>Moy. Brevet Allemand :</strong> {formatScore(moyBrevAllemand)}</div>
+                    )}
+                  </div>
                 )}
               </td>
             </tr>
@@ -437,22 +445,8 @@ export function ReportCard({
 
               <td style={{ width: '3%' }}>&nbsp;</td>
 
-              {/* Signatures + Moyennes Brevet */}
+              {/* Signatures */}
               <td style={{ width: '32%', verticalAlign: 'top', border: '1px solid #000', padding: '6px', textAlign: 'center', fontSize: '8pt' }}>
-                {/* Moyennes Brevet — 4ème et 3ème uniquement */}
-                {isBrevet && notedCount > 0 && (
-                  <div style={{ marginBottom: '8px', textAlign: 'left', fontSize: '7.5pt', borderBottom: '1px dotted #aaa', paddingBottom: '6px' }}>
-                    {hasAnglais && (
-                      <div><strong>Moy. Brevet Anglais :</strong> {formatScore(moyBrevAnglais)}</div>
-                    )}
-                    {hasEspagnol && (
-                      <div><strong>Moy. Brevet Espagnol :</strong> {formatScore(moyBrevEspagnol)}</div>
-                    )}
-                    {hasAllemand && (
-                      <div><strong>Moy. Brevet Allemand :</strong> {formatScore(moyBrevAllemand)}</div>
-                    )}
-                  </div>
-                )}
                 <strong>Visa du chef d'établissement</strong>
                 <br /><br /><br />
                 <div style={{ borderBottom: '1px solid #aaa', marginBottom: '12px' }} />
