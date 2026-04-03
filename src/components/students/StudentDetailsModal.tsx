@@ -27,10 +27,10 @@ const TABS: { key: Tab; label: string; icon: React.ReactNode }[] = [
 
 interface Props {
   student: Student;
-  allStudents: Student[];
+  allStudents?: Student[];
   onClose: () => void;
   onEdit: (student: Student) => void;
-  onDelete: (student: Student) => void;
+  onDelete?: (student: Student) => void;
 }
 
 function dossierScore(s: Student): number {
@@ -39,7 +39,7 @@ function dossierScore(s: Student): number {
   return Math.round(fields.filter(Boolean).length / fields.length * 100);
 }
 
-export function StudentDetailsModal({ student, allStudents, onClose, onEdit, onDelete }: Props) {
+export function StudentDetailsModal({ student, allStudents = [], onClose, onEdit, onDelete }: Props) {
   const [current, setCurrent] = useState<Student>(student);
   const [activeTab, setActiveTab] = useState<Tab>('classe');
   const [docPreview, setDocPreview] = useState<DocPreview>(null);
@@ -123,12 +123,14 @@ export function StudentDetailsModal({ student, allStudents, onClose, onEdit, onD
           {current.firstName} {current.lastName.toUpperCase()}
         </span>
         <div className="flex-1 hidden lg:block" />
-        <button
-          onClick={() => onDelete(current)}
-          className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-sm text-red-500 border border-red-200 rounded-lg hover:bg-red-50 transition-colors flex-shrink-0"
-        >
-          <Trash2 size={13} /> <span className="hidden sm:inline">Supprimer</span>
-        </button>
+        {onDelete && (
+          <button
+            onClick={() => onDelete(current)}
+            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-sm text-red-500 border border-red-200 rounded-lg hover:bg-red-50 transition-colors flex-shrink-0"
+          >
+            <Trash2 size={13} /> <span className="hidden sm:inline">Supprimer</span>
+          </button>
+        )}
       </header>
 
       {/* ── Corps principal ── */}
