@@ -112,11 +112,11 @@ export function CertificateTemplate({ type, student }: CertificateTemplateProps)
           box-sizing: border-box;
         }
 
-        /* ── Page 10 × 13 cm avec bordure double bleue ── */
+        /* ── Page 13 × 10 cm (paysage) avec bordure double bleue ── */
         .page-border {
-          width: 100mm;
-          height: 130mm;
-          padding: 5mm 6mm;
+          width: 130mm;
+          height: 100mm;
+          padding: 4mm 6mm;
           border: 5px double #2097bf;
           box-sizing: border-box;
           background: #fff;
@@ -230,15 +230,15 @@ export function CertificateTemplate({ type, student }: CertificateTemplateProps)
         /* ── Impression ── */
         @media print {
           @page {
-            size: 100mm 130mm;
+            size: 130mm 100mm;
             margin: 0;
           }
 
           html, body {
             margin: 0;
             padding: 0;
-            width: 100mm;
-            height: 130mm;
+            width: 130mm;
+            height: 100mm;
           }
 
           .cert-wrap {
@@ -247,8 +247,8 @@ export function CertificateTemplate({ type, student }: CertificateTemplateProps)
           }
 
           .page-border {
-            width: 100mm;
-            height: 130mm;
+            width: 130mm;
+            height: 100mm;
           }
         }
       `}</style>
