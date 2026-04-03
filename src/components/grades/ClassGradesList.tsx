@@ -15,7 +15,8 @@ import { studentApi, gradesApi } from '../../services/api';
 import { subjectsApi } from '../../services/api/subjectsApi';
 import { mockTeachers } from '../../data/mockTeachers';
 import { calculateAverage, calculateClassStats } from '../../utils/grades';
-import type { Student, Subject, Grade } from '../../types';
+import type { Student, Subject } from '../../types';
+import type { Grade } from '../../types/grade';
 
 interface ClassGradesListProps {
   grade: string;
@@ -163,6 +164,7 @@ export function ClassGradesList({ grade, onBack }: ClassGradesListProps) {
         student={selectedStudent}
         grades={currentTermGrades}
         allGrades={grades}
+        subjects={subjects}
         classStats={getClassStats()}
         term={selectedTerm}
         schoolYear={currentYear}

@@ -18,6 +18,7 @@ import { useState } from 'react';
 import { Printer, X } from 'lucide-react';
 import type { Student } from '../../../types/student';
 import type { Grade } from '../../../types/grade';
+import type { Subject } from '../../../types/subject';
 import { calculateAverage, getGradeLevel, formatScore, getMentionFromAverage } from '../../../utils/grades';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -32,6 +33,8 @@ interface ReportCardProps {
   grades: Grade[];
   /** Toutes les notes de l'élève (pour les autres trimestres) */
   allGrades: Grade[];
+  /** Toutes les matières actives (pour afficher les matières sans note) */
+  subjects: Subject[];
   /** Statistiques de classe par subjectId */
   classStats: Record<string, ClassSubjectStats>;
   term: 1 | 2 | 3;
@@ -55,8 +58,12 @@ const S = {
 
 // ─── Composant principal ──────────────────────────────────────────────────────
 
+// Matières langues étrangères : si pas de note → ne pas afficher sur le bulletin
+const LANG_KEYWORDS = ['anglais', 'espagnol', 'allemand'];
+const isLang = (name: string) => LANG_KEYWORDS.some(k => name.toLowerCase().includes(k));
+
 export function ReportCard({
-  student, grades, allGrades: _allGrades, classStats,
+  student, grades, allGrades: _allGrades, subjects, classStats,
   term, schoolYear, classAverage, teacherName,
   otherTermsAverages, onClose,
 }: ReportCardProps) {
@@ -73,8 +80,31 @@ export function ReportCard({
   })();
   const schoolName = settings.schoolName ?? 'COLLÈGE SULLY';
 
+  // Lignes à afficher dans le tableau :
+  // - Langues (anglais/espagnol/allemand) : uniquement si une note existe
+  // - Toutes les autres matières : toujours affichées
+  const displayRows = subjects
+    .filter(s => isLang(s.name) ? grades.some(g => g.subjectId === s.id) : true)
+    .map(s => ({ subject: s, grade: grades.find(g => g.subjectId === s.id) ?? null }));
+
+  // La moyenne ne compte que les matières effectivement notées
   const studentAverage = calculateAverage(grades);
   const notedCount = grades.length;
+
+  // ── Moyennes Brevet (4ème et 3ème uniquement) ──────────────────────────────
+  const isBrevet = /^[34]/.test(student.grade.trim());
+  const hasAnglais  = grades.some(g => g.subjectName.toLowerCase().includes('anglais'));
+  const hasEspagnol = grades.some(g => g.subjectName.toLowerCase().includes('espagnol'));
+  const hasAllemand = grades.some(g => g.subjectName.toLowerCase().includes('allemand'));
+
+  // Moy. Brevet Anglais = toutes matières sauf espagnol et allemand
+  const moyBrevAnglais = calculateAverage(
+    grades.filter(g => !g.subjectName.toLowerCase().includes('espagnol') && !g.subjectName.toLowerCase().includes('allemand'))
+  );
+  // Moy. Brevet Espagnol = toutes matières sauf anglais
+  const moyBrevEspagnol = calculateAverage(grades.filter(g => !g.subjectName.toLowerCase().includes('anglais')));
+  // Moy. Brevet Allemand = toutes matières sauf anglais
+  const moyBrevAllemand = calculateAverage(grades.filter(g => !g.subjectName.toLowerCase().includes('anglais')));
 
   // Mention auto-calculée selon la moyenne (modifiable manuellement avant impression)
   const autoMention = getMentionFromAverage(studentAverage);
@@ -281,33 +311,33 @@ export function ReportCard({
             </tr>
           </thead>
           <tbody>
-            {/* Lignes par matière — UNIQUEMENT les matières notées */}
-            {grades.map(g => {
-              const stats = classStats[g.subjectId] ?? { avg: 0, min: 0, max: 20 };
+            {/* Lignes par matière */}
+            {displayRows.map(({ subject, grade: g }) => {
+              const stats = classStats[subject.id] ?? { avg: 0, min: 0, max: 0 };
               return (
-                <tr key={g.id}>
+                <tr key={subject.id}>
                   <td style={{ ...S.cell, fontSize: '8pt' }}>
-                    <strong>{g.subjectName}</strong>
-                    {g.teacherName && (
-                      <div style={{ fontSize: '7pt', color: '#555', marginTop: '1px' }}>{g.teacherName}</div>
+                    <strong>{subject.name}</strong>
+                    {subject.teacherName && (
+                      <div style={{ fontSize: '7pt', color: '#555', marginTop: '1px' }}>{subject.teacherName}</div>
                     )}
                   </td>
-                  <td style={{ ...S.cellC, fontWeight: 'bold' }}>{formatScore(g.score)}</td>
+                  <td style={{ ...S.cellC, fontWeight: 'bold' }}>{g ? formatScore(g.score) : '—'}</td>
                   <td style={{ ...S.cellC }}>{stats.avg > 0 ? formatScore(stats.avg) : '—'}</td>
-                  <td style={{ ...S.cellC }}>{g.coefficient}</td>
+                  <td style={{ ...S.cellC }}>{subject.coefficient}</td>
                   <td style={{ ...S.cellC }}>{stats.min > 0 ? formatScore(stats.min) : '—'}</td>
                   <td style={{ ...S.cellC }}>{stats.max > 0 ? formatScore(stats.max) : '—'}</td>
-                  <td style={{ ...S.cellC, fontWeight: 'bold' }}>{getGradeLevel(g.score)}</td>
-                  <td style={{ ...S.cell, fontSize: '7pt' }}>{g.comments ?? ''}</td>
+                  <td style={{ ...S.cellC, fontWeight: 'bold' }}>{g ? getGradeLevel(g.score) : '—'}</td>
+                  <td style={{ ...S.cell, fontSize: '7pt' }}>{g?.comments ?? ''}</td>
                 </tr>
               );
             })}
 
-            {/* Message si aucune note */}
-            {grades.length === 0 && (
+            {/* Message si aucune matière */}
+            {displayRows.length === 0 && (
               <tr>
                 <td colSpan={8} style={{ ...S.cellC, fontSize: '8pt', color: '#888', fontStyle: 'italic', padding: '8px' }}>
-                  Aucune note saisie pour ce trimestre
+                  Aucune matière configurée pour ce trimestre
                 </td>
               </tr>
             )}
@@ -407,8 +437,22 @@ export function ReportCard({
 
               <td style={{ width: '3%' }}>&nbsp;</td>
 
-              {/* Signatures */}
+              {/* Signatures + Moyennes Brevet */}
               <td style={{ width: '32%', verticalAlign: 'top', border: '1px solid #000', padding: '6px', textAlign: 'center', fontSize: '8pt' }}>
+                {/* Moyennes Brevet — 4ème et 3ème uniquement */}
+                {isBrevet && notedCount > 0 && (
+                  <div style={{ marginBottom: '8px', textAlign: 'left', fontSize: '7.5pt', borderBottom: '1px dotted #aaa', paddingBottom: '6px' }}>
+                    {hasAnglais && (
+                      <div><strong>Moy. Brevet Anglais :</strong> {formatScore(moyBrevAnglais)}</div>
+                    )}
+                    {hasEspagnol && (
+                      <div><strong>Moy. Brevet Espagnol :</strong> {formatScore(moyBrevEspagnol)}</div>
+                    )}
+                    {hasAllemand && (
+                      <div><strong>Moy. Brevet Allemand :</strong> {formatScore(moyBrevAllemand)}</div>
+                    )}
+                  </div>
+                )}
                 <strong>Visa du chef d'établissement</strong>
                 <br /><br /><br />
                 <div style={{ borderBottom: '1px solid #aaa', marginBottom: '12px' }} />
