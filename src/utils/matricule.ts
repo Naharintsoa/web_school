@@ -1,6 +1,6 @@
-import type { Grade, MatriculeInfo } from '../types/student';
+import type { ClassLevel, MatriculeInfo } from '../types/student';
 
-const GRADE_CODES: Record<Grade, string> = {
+const GRADE_CODES: Record<ClassLevel, string> = {
   'PS': '01',
   'MS': '02',
   'GS': '03',

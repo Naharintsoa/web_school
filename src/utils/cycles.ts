@@ -1,6 +1,6 @@
-import type { Grade, Cycle } from '../types/student';
+import type { ClassLevel, Cycle } from '../types/student';
 
-export const CYCLES: Record<Cycle, { name: string; grades: Grade[] }> = {
+export const CYCLES: Record<Cycle, { name: string; grades: ClassLevel[] }> = {
   'CYCLE1': {
     name: 'Cycle 1 - Cycle des apprentissages premiers',
     grades: ['PS', 'MS', 'GS']
@@ -19,7 +19,7 @@ export const CYCLES: Record<Cycle, { name: string; grades: Grade[] }> = {
   }
 };
 
-export function getGradeCycle(grade: Grade): Cycle {
+export function getGradeCycle(grade: ClassLevel): Cycle {
   for (const [cycle, info] of Object.entries(CYCLES)) {
     if (info.grades.includes(grade)) {
       return cycle as Cycle;

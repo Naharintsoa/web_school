@@ -1,4 +1,4 @@
-import type { Grade, MatriculeInfo } from '../types';
+import type { ClassLevel, MatriculeInfo } from '../types';
 
 // Generate a student number within their class
 export function generateStudentNumber(existingNumbers: number[]): number {
@@ -21,7 +21,7 @@ export function generateMatricule({ year, grade, sequence }: MatriculeInfo): str
 }
 
 // Convert grade to two-digit code
-function getGradeCode(grade: Grade): string {
+function getGradeCode(grade: ClassLevel): string {
   const gradeCodes = {
     'PS': '01',
     'MS': '02',

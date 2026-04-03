@@ -1,6 +1,6 @@
 export type Gender = 'male' | 'female';
 
-export type Grade = 
+export type ClassLevel =
   | 'PS' | 'MS' | 'GS'           // Cycle 1
   | 'CP' | 'CE1' | 'CE2'        // Cycle 2
   | 'CM1' | 'CM2' | '6EME'      // Cycle 3
@@ -35,7 +35,7 @@ export interface Student {
   nationality?: string;
   birthCity?: string;
   birthCountry?: string;
-  grade: Grade;
+  grade: ClassLevel;
   cycle: Cycle;
   photoUrl?: string;
   issNumber?: string;
@@ -49,6 +49,6 @@ export interface Student {
 
 export interface MatriculeInfo {
   year: string;
-  grade: Grade;
+  grade: ClassLevel;
   sequence: number;
 }
