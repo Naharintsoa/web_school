@@ -1,176 +1,243 @@
 import type { Student } from '../../../types';
 import { useSchoolYear } from '../../../contexts/SchoolYearContext';
 
-
-// Composant pour l'entête
-function CertificateHeader() {
-  return (
-    <div className="flex items-center mb-2">
-      {/* Logo avec marge à gauche */}
-      <div className="w-30 h-20 flex-shrink-0 ml-5">
-        <img
-          src="/assets/logo-sully.png" // Assurez-vous que l'image est présente dans votre dossier 'assets'
-          alt="Logo Sully"
-          className="w-full h-full object-contain"
-        />
-      </div>
-
-      {/* Texte à droite */}
-      <div className="ml-2 text-center flex-grow">
-        <h1 className="text-[20px] font-bold text-[#09438a] uppercase">
-          COLLEGE PRIVE SULLY
-        </h1>
-
-        <p className="text-[10px] leading-4 text-gray-800">
-          Lot IV A 16 bis Ambodivonkely Ambohimanarina<br />
-          Tel: <strong>020 85 234 94</strong> - <strong>034 16 351 52</strong> | Email: <strong>sully@moov.mg</strong><br />
-          CISCO Antananarivo Ville Code: <strong>101 011 793 ZAP VI</strong><br />
-          AO N° 036/2019 - DRENETP/ANALA/AO du 21/11/19
-        </p>
-      </div>
-    </div>
-  );
-}
-
-// Composant principal du certificat
 interface CertificateTemplateProps {
   type: 'scolarite' | 'radiation';
   student: Student;
   customText?: string;
 }
 
+function fmtDate(iso: string): string {
+  if (!iso) return '—';
+  try {
+    return new Date(iso).toLocaleDateString('fr-FR');
+  } catch {
+    return iso;
+  }
+}
+
+function fmtDateLong(date: Date): string {
+  return date.toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
+}
+
 export function CertificateTemplate({ type, student }: CertificateTemplateProps) {
   const { currentYear } = useSchoolYear();
-  const today = new Date().toLocaleDateString('fr-FR');
+  const today = fmtDateLong(new Date());
 
   return (
-    <div className="certificate-container">
-      <div className="page">
-        <div className="page-inner">
-          {/* En-tête */}
-          <CertificateHeader />
-
-          {/* Ligne de séparation */}
-          <hr className="border-[#09438a] border-t-2 my-3" />
-
-          {/* Titre */}
-          <p className="text-center font-bold text-[14px] text-[#09438a] mt-4 mb-6 tracking-wide uppercase">
-            {type === 'radiation' ? 'Certificat de Radiation' : 'Certificat de Scolarité'} — {currentYear}
-          </p>
-
-          {/* Introduction (Directrice) */}
-          <div className="intro mt-2 px-[40px]">
-            <p className="font-serif text-[12px]">
-              Je soussignée, <strong>RAMANANIRAINY Norotahiana</strong>, Directrice nominale de l'école SULLY,
-              certifie sur l'honneur que l'élève :
+    <>
+      <div className="cert-page">
+        {/* ══ En-tête ══ */}
+        <div className="cert-header">
+          <div className="cert-logo">
+            <img src="/assets/logo-sully.png" alt="Logo Sully" />
+          </div>
+          <div className="cert-school-info">
+            <p className="school-motto-top">L'issue vers la réussite</p>
+            <p className="school-name">COLLEGE PRIVE SULLY</p>
+            <p className="school-motto-bottom">Savoir être-Savoir - Savoir faire</p>
+            <p className="school-address">
+              Lot IV A 16 bis Ambodivonkely - Téléphone: 020 85 234 94 - sully.amb@moov.mg
             </p>
+            <p className="school-address">CISCO Antananarivo Ville - Code : 101 011 793 - ZAP VI</p>
+            <p className="school-address">AO N° 036/2019 - DRENETP/ANALA/AO du 21/11/19</p>
           </div>
+        </div>
 
-          {/* Corps du certificat */}
-          <div className="mt-5 px-[60px]">
-            <ul className="list-disc pl-6 text-[12px] space-y-1">
-              <li><strong>Nom :</strong> {student.lastName}</li>
-              <li><strong>Prénoms :</strong> {student.firstName}</li>
-              <li><strong>Né(e) le :</strong> {new Date(student.dateOfBirth).toLocaleDateString('fr-FR')}</li>
-              <li><strong>À :</strong> Antananarivo</li>
-              <li><strong>Fils/Fille de :</strong> {student.parentInfo.fatherName}</li>
-              <li><strong>Et de :</strong> {student.parentInfo.motherName}</li>
-            </ul>
+        {/* ══ Séparateur ══ */}
+        <div className="cert-divider" />
 
-            <div className="mt-5 space-y-2 text-[12px]">
-              <p><strong>Est élève dans mon établissement</strong></p>
-              <p><strong>Depuis le :</strong> {new Date(student.enrollmentDate).toLocaleDateString('fr-FR')}</p>
-              <p><strong>Classe actuelle :</strong> {student.grade}</p>
-              <p><strong>Numéro matricule :</strong> {student.matricule}</p>
-            </div>
+        {/* ══ Titre ══ */}
+        <p className="cert-title">
+          {type === 'radiation' ? 'CERTIFICAT DE RADIATION' : 'CERTIFICAT DE SCOLARITÉ'} — {currentYear}
+        </p>
 
-            <p className="text-center mt-8 text-[12px] font-serif italic">
-              Ce certificat lui est délivré pour servir et valoir ce que de droit.
-            </p>
-          </div>
+        {/* ══ Introduction ══ */}
+        <p className="cert-intro">
+          Je soussignée, <strong>Norotahiana RAMANANIRAINY</strong>, Directrice nominale de{' '}
+          COLLEGE PRIVE SULLY, certifie sur l'honneur que l'élève :
+        </p>
 
-          {/* Signature — poussée vers le bas */}
-          <div className="signature-block">
-            <p className="text-[11px]">Antananarivo, le {today}</p>
-            <p className="mt-[50px] text-[12px] font-semibold">RAMANANIRAINY Norotahiana</p>
-            <p className="text-[10px] italic text-gray-600">Directrice</p>
-          </div>
+        {/* ══ Données élève ══ */}
+        <ul className="cert-list">
+          <li><span className="cert-label">Nom :</span> <strong>{student.lastName?.toUpperCase()}</strong></li>
+          <li><span className="cert-label">Prénoms :</span> <strong>{student.firstName}</strong></li>
+          <li><span className="cert-label">Né(e) le :</span> <strong>{fmtDate(student.dateOfBirth)}</strong></li>
+          <li><span className="cert-label">À :</span> <strong>{student.birthCity || 'Antananarivo'}</strong></li>
+          <li><span className="cert-label">Fils ou Fille de :</span> <strong>{student.parentInfo.fatherName}</strong></li>
+          <li><span className="cert-label">Et de :</span> <strong>{student.parentInfo.motherName}</strong></li>
+          <li><span className="cert-label">Est élève depuis le :</span> <strong>{fmtDate(student.enrollmentDate)}</strong></li>
+          <li><span className="cert-label">Classe actuelle :</span> <strong>{student.grade}</strong></li>
+          <li><span className="cert-label">Matricule :</span> <strong>{student.matricule}</strong></li>
+        </ul>
+
+        {/* ══ Formule de clôture ══ */}
+        <p className="cert-closing">
+          Ce certificat lui est délivré pour servir et valoir ce que de droit.
+        </p>
+
+        {/* ══ Signature ══ */}
+        <div className="cert-signature">
+          <p>Antananarivo, le {today}</p>
+          <div className="cert-sig-space" />
+          <p className="cert-sig-name">Norotahiana RAMANANIRAINY</p>
         </div>
       </div>
 
       <style>{`
-        .certificate-container {
-          display: flex;
-          justify-content: center;
-          align-items: flex-start;
-          background: #e5e7eb;
-          padding: 16px;
-          min-height: 100%;
-          box-sizing: border-box;
-        }
-
-        .page {
+        /* ── Conteneur A4 ── */
+        .cert-page {
           width: 210mm;
           min-height: 297mm;
-          background: #ffffff;
-          border: 4px solid #09438a;
-          border-radius: 8px;
           box-sizing: border-box;
+          padding: 10mm 12mm;
+          background: #fff;
+          border: 1.5px solid #2897bf;
+          font-family: 'Times New Roman', Times, serif;
+          font-size: 12px;
+          color: #111;
           display: flex;
           flex-direction: column;
         }
 
-        .page-inner {
+        /* ── En-tête ── */
+        .cert-header {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          margin-bottom: 4px;
+        }
+
+        .cert-logo {
+          width: 70px;
+          height: 70px;
+          flex-shrink: 0;
+        }
+
+        .cert-logo img {
+          width: 100%;
+          height: 100%;
+          object-fit: contain;
+        }
+
+        .cert-school-info {
           flex: 1;
-          display: flex;
-          flex-direction: column;
-          padding: 12mm 15mm 10mm;
-          box-sizing: border-box;
-          min-height: 297mm;
+          text-align: center;
+          line-height: 1.4;
         }
 
-        .signature-block {
+        .school-motto-top {
+          font-style: italic;
+          font-size: 10px;
+          margin: 0;
+        }
+
+        .school-name {
+          font-size: 16px;
+          font-weight: bold;
+          color: #09438a;
+          margin: 1px 0;
+          text-transform: uppercase;
+        }
+
+        .school-motto-bottom {
+          font-style: italic;
+          font-size: 10px;
+          font-weight: bold;
+          margin: 0 0 2px;
+        }
+
+        .school-address {
+          font-size: 9px;
+          margin: 0;
+          color: #333;
+        }
+
+        /* ── Séparateur ── */
+        .cert-divider {
+          border: none;
+          border-top: 1.5px solid #2897bf;
+          margin: 6px 0;
+        }
+
+        /* ── Titre ── */
+        .cert-title {
+          text-align: center;
+          font-weight: bold;
+          font-size: 13px;
+          color: #09438a;
+          margin: 10px 0 18px;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+
+        /* ── Introduction ── */
+        .cert-intro {
+          font-size: 12px;
+          line-height: 1.6;
+          margin: 0 0 12px 30px;
+        }
+
+        /* ── Liste élève ── */
+        .cert-list {
+          list-style: disc;
+          padding-left: 50px;
+          margin: 0 0 16px;
+          font-size: 12px;
+          line-height: 1.7;
+        }
+
+        .cert-list li {
+          margin: 0;
+        }
+
+        .cert-label {
+          color: #111;
+        }
+
+        .cert-list strong {
+          color: #09438a;
+        }
+
+        /* ── Formule de clôture ── */
+        .cert-closing {
+          font-size: 12px;
+          margin: 0 0 0 0;
+          line-height: 1.6;
+        }
+
+        /* ── Signature ── */
+        .cert-signature {
           margin-top: auto;
           text-align: right;
-          padding-top: 20mm;
+          padding-top: 16mm;
+          font-size: 11px;
         }
 
-        strong {
-          color: #09438a;
+        .cert-sig-space {
+          height: 40px;
         }
 
-        .content ul li strong {
-          color: #09438a;
+        .cert-sig-name {
+          font-weight: bold;
+          font-size: 12px;
+          margin: 0;
         }
 
+        /* ── Impression ── */
         @media print {
           @page {
             size: A4 portrait;
             margin: 0;
           }
 
-          body, html {
-            overflow: hidden !important;
-          }
-
-          .certificate-container {
-            background: none;
-            padding: 0;
-          }
-
-          .page {
+          .cert-page {
             width: 210mm;
             min-height: 297mm;
-            border: 4px solid #09438a;
-            border-radius: 8px;
-            page-break-after: always;
-          }
-
-          .page-inner {
-            min-height: 297mm;
+            padding: 10mm 12mm;
           }
         }
       `}</style>
-    </div>
+    </>
   );
 }

@@ -88,7 +88,7 @@ export function CertificatePreview({ type, student, onClose }: CertificatePrevie
           </div>
         </div>
 
-        <div className="overflow-auto p-2 sm:p-6 lg:p-8 print:p-0">
+        <div className="overflow-auto p-4 sm:p-6 print:p-0 bg-gray-100">
           {isEditing && (
             <div className="max-w-2xl mx-auto mb-4 print:hidden">
               <label className="block text-sm font-medium text-gray-700 mb-2">
