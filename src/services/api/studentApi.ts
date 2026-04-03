@@ -6,6 +6,10 @@ export const studentApi = {
     return apiFetch<Student[]>('/students');
   },
 
+  getById: async (id: string): Promise<Student> => {
+    return apiFetch<Student>(`/students/${id}`);
+  },
+
   create: async (student: Omit<Student, 'id'>): Promise<Student> => {
     return apiFetch<Student>('/students', {
       method: 'POST',

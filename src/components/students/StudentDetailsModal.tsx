@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   ArrowLeft, Edit2, Trash2, Phone, Mail, MapPin,
   Camera, FileText, User, Image, AlertCircle, Save, X,
@@ -47,6 +47,25 @@ export function StudentDetailsModal({ student, allStudents, onClose, onEdit, onD
   const [issVal, setIssVal] = useState(current.issNumber ?? '');
   const [savingIss, setSavingIss] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [loadingFresh, setLoadingFresh] = useState(false);
+
+  // Charger les données fraîches depuis le serveur à chaque ouverture
+  useEffect(() => {
+    let cancelled = false;
+    setLoadingFresh(true);
+    studentApi.getById(student.id)
+      .then(fresh => {
+        if (!cancelled) {
+          setCurrent(fresh);
+          setIssVal(fresh.issNumber ?? '');
+          onEdit(fresh);
+        }
+      })
+      .catch(() => { /* utiliser les données du prop si l'appel échoue */ })
+      .finally(() => { if (!cancelled) setLoadingFresh(false); });
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [student.id]);
 
   const savePartial = async (patch: Partial<Omit<Student, 'id'>>) => {
     const payload = { ...current, ...patch };
@@ -182,6 +201,14 @@ export function StudentDetailsModal({ student, allStudents, onClose, onEdit, onD
               <Camera size={13} /> Modifier la photo
             </button>
           </div>
+
+          {/* Indicateur de chargement */}
+          {loadingFresh && (
+            <div className="mx-4 mt-3 flex items-center gap-2 text-white/40 text-xs">
+              <span className="w-3 h-3 border border-white/30 border-t-transparent rounded-full animate-spin flex-shrink-0" />
+              Actualisation…
+            </div>
+          )}
 
           {/* ── Barre de complétion ── */}
           <div className="mx-4 mt-4 mb-2 bg-white/5 rounded-xl p-3 border border-white/10">
@@ -479,6 +506,14 @@ function TabAdresse({ student, onSave }: { student: Student; onSave: (p: Partial
   const [address, setAddress] = useState(student.parentInfo?.address ?? '');
   const [email, setEmail]     = useState(student.parentInfo?.email ?? '');
 
+  // Sync form state quand les données fraîches arrivent
+  useEffect(() => {
+    if (!editing) {
+      setAddress(student.parentInfo?.address ?? '');
+      setEmail(student.parentInfo?.email ?? '');
+    }
+  }, [student.parentInfo?.address, student.parentInfo?.email, editing]);
+
   const handleSave = async () => {
     setSaving(true);
     try { await onSave({ parentInfo: { ...student.parentInfo, address, email } }); setEditing(false); }
@@ -563,6 +598,19 @@ function TabParents({ student, onSave }: { student: Student; onSave: (p: Partial
     motherPhone: pi.motherPhone ?? '', motherEmail: pi.motherEmail ?? '',
   });
 
+  // Sync form state quand les données fraîches arrivent
+  useEffect(() => {
+    if (!editing) {
+      const p = student.parentInfo ?? {} as typeof student.parentInfo;
+      setForm({
+        fatherName: p.fatherName ?? '', fatherOccupation: p.fatherOccupation ?? '',
+        fatherPhone: p.fatherPhone ?? '', fatherEmail: p.fatherEmail ?? '',
+        motherName: p.motherName ?? '', motherOccupation: p.motherOccupation ?? '',
+        motherPhone: p.motherPhone ?? '', motherEmail: p.motherEmail ?? '',
+      });
+    }
+  }, [student.parentInfo, editing]);
+
   const set = (k: keyof typeof form) => (v: string) => setForm(f => ({ ...f, [k]: v }));
 
   const handleSave = async () => {
@@ -572,11 +620,12 @@ function TabParents({ student, onSave }: { student: Student; onSave: (p: Partial
   };
 
   const handleCancel = () => {
+    const p = student.parentInfo ?? {} as typeof student.parentInfo;
     setForm({
-      fatherName: pi.fatherName ?? '', fatherOccupation: pi.fatherOccupation ?? '',
-      fatherPhone: pi.fatherPhone ?? '', fatherEmail: pi.fatherEmail ?? '',
-      motherName: pi.motherName ?? '', motherOccupation: pi.motherOccupation ?? '',
-      motherPhone: pi.motherPhone ?? '', motherEmail: pi.motherEmail ?? '',
+      fatherName: p.fatherName ?? '', fatherOccupation: p.fatherOccupation ?? '',
+      fatherPhone: p.fatherPhone ?? '', fatherEmail: p.fatherEmail ?? '',
+      motherName: p.motherName ?? '', motherOccupation: p.motherOccupation ?? '',
+      motherPhone: p.motherPhone ?? '', motherEmail: p.motherEmail ?? '',
     });
     setEditing(false);
   };

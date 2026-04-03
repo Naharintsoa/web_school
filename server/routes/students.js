@@ -83,6 +83,17 @@ router.get('/', async (_req, res) => {
   }
 });
 
+router.get('/:id', async (req, res) => {
+  try {
+    const { rows } = await pool.query('SELECT * FROM students WHERE id = $1', [req.params.id]);
+    if (rows.length === 0) return res.status(404).json({ message: 'Élève introuvable.' });
+    return res.json(rowToStudent(rows[0]));
+  } catch (err) {
+    console.error('Erreur récupération élève:', err);
+    return res.status(500).json({ message: 'Erreur serveur.' });
+  }
+});
+
 router.get('/family/:familyId', async (req, res) => {
   try {
     const { rows } = await pool.query(
