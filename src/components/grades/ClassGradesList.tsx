@@ -6,10 +6,11 @@
  * - Génération et impression du bulletin
  */
 import React, { useState, useEffect, useCallback } from 'react';
-import { Search, Printer, ArrowLeft, Settings2, Calculator } from 'lucide-react';
+import { Search, Printer, ArrowLeft, Settings2, Calculator, Users } from 'lucide-react';
 import { GradeInput } from './GradeInput';
 import { SubjectManager } from './SubjectManager';
 import { ReportCard } from './report-card/ReportCard';
+import { ClassCouncilView } from './ClassCouncilView';
 import { useSchoolYear } from '../../contexts/SchoolYearContext';
 import { studentApi, gradesApi } from '../../services/api';
 import { subjectsApi } from '../../services/api/subjectsApi';
@@ -41,6 +42,7 @@ export function ClassGradesList({ grade, onBack }: ClassGradesListProps) {
   const [allClassGrades, setAllClassGrades] = useState<Grade[]>([]);
   const [showReportCard, setShowReportCard] = useState(false);
   const [showSubjectManager, setShowSubjectManager] = useState(false);
+  const [showCouncil, setShowCouncil] = useState(false);
 
   // Professeur principal de la classe
   const principalTeacher = (() => {
@@ -157,6 +159,19 @@ export function ClassGradesList({ grade, onBack }: ClassGradesListProps) {
     s.lastName.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Vue Conseil de classe (plein écran, imprimable)
+  if (showCouncil) {
+    return (
+      <ClassCouncilView
+        grade={grade}
+        term={selectedTerm}
+        students={students}
+        subjects={subjects}
+        onClose={() => setShowCouncil(false)}
+      />
+    );
+  }
+
   // Vue bulletin (plein écran, prête à imprimer)
   if (showReportCard && selectedStudent) {
     return (
@@ -197,6 +212,13 @@ export function ClassGradesList({ grade, onBack }: ClassGradesListProps) {
             >
               <Settings2 size={16} />
               <span className="hidden sm:inline">Gérer les matières</span>
+            </button>
+            <button
+              onClick={() => setShowCouncil(true)}
+              className="flex items-center gap-2 px-3 py-2 text-sm text-emerald-700 border border-emerald-300 rounded-lg hover:bg-emerald-50"
+            >
+              <Users size={16} />
+              <span className="hidden sm:inline">Conseil de classe</span>
             </button>
             {selectedStudent && (
               <button

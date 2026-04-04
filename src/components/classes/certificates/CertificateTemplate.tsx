@@ -110,8 +110,11 @@ export function CertificateTemplate({ type, student }: CertificateTemplateProps)
               overflow: hidden;
             }
             .certificate-container {
-              margin: 25px;
-              background-color: white; /* Ajout du fond blanc autour de la bordure */
+              display: flex;
+              justify-content: center;
+              align-items: flex-start;
+              padding: 10px;
+              background-color: white;
             }
 
             .page {
@@ -143,8 +146,11 @@ export function CertificateTemplate({ type, student }: CertificateTemplateProps)
           }
 
           .certificate-container {
-            margin: 25px;
-            background-color: white; /* Fond blanc autour du certificat */
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 20px;
+            background-color: #f3f4f6;
           }
 
           .page {
