@@ -2,8 +2,8 @@ import React, { createContext, useContext, useState } from 'react';
 
 const YEAR_KEY = 'sully-school-year';
 /** Clé de migration : si la version change, le localStorage est réinitialisé */
-const MIGRATION_KEY = 'sully-year-migration-v2';
-const DEFAULT_YEAR = '2024-2025';
+const MIGRATION_KEY = 'sully-year-migration-v3';
+const DEFAULT_YEAR = '2025-2026';
 
 function resolveInitialYear(): string {
   // Forcer la réinitialisation si la migration v2 n'a pas encore tourné
