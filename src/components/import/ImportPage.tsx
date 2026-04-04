@@ -19,6 +19,7 @@ import {
 import { studentApi } from '../../services/api';
 import { useSchoolYear } from '../../contexts/SchoolYearContext';
 import { useToast } from '../../contexts/ToastContext';
+import { SCHOOL_YEARS } from '../../utils/schoolYears';
 import type { Student, Grade as GradeType, Cycle } from '../../types';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -347,6 +348,7 @@ export function ImportPage() {
   const [importing, setImporting] = useState(false);
   const [showErrors, setShowErrors] = useState(false);
   const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set());
+  const [importYear, setImportYear] = useState<string>(currentYear);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // ── Parsing du fichier ────────────────────────────────────────────────────
@@ -590,7 +592,7 @@ export function ImportPage() {
             address: row.address || '',
           },
           enrollmentDate: row.enrollmentDate || today,
-          schoolYear: row.schoolYear || currentYear,
+          schoolYear: importYear,
         };
         await studentApi.create(studentData);
         if (row.matricule) existingMatricules.add(row.matricule);
@@ -711,6 +713,26 @@ export function ImportPage() {
         ════════════════════════════════════════════════════ */}
         {step === 'upload' && (
           <>
+            {/* Sélecteur d'année scolaire d'importation */}
+            <div className="bg-white rounded-2xl ring-1 ring-slate-200 px-5 py-4 flex items-center gap-4">
+              <div className="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-slate-800">Année scolaire d'importation</p>
+                <p className="text-xs text-slate-400">Tous les élèves importés seront enregistrés pour cette année</p>
+              </div>
+              <select
+                value={importYear}
+                onChange={e => setImportYear(e.target.value)}
+                className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+              >
+                {SCHOOL_YEARS.map(y => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
+              </select>
+            </div>
+
             {/* Zone de dépôt principale */}
             <div
               onDragOver={e => { e.preventDefault(); setIsDragging(true); }}
