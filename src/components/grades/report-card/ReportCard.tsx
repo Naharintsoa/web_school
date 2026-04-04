@@ -97,13 +97,13 @@ export function ReportCard({
   const hasEspagnol = grades.some(g => g.subjectName.toLowerCase().includes('espagnol'));
   const hasAllemand = grades.some(g => g.subjectName.toLowerCase().includes('allemand'));
 
-  // Moy. Brevet Anglais = toutes matières sauf espagnol et allemand
+  // Moyenne Brevet Anglais = toutes matières sauf espagnol et allemand
   const moyBrevAnglais = calculateAverage(
     grades.filter(g => !g.subjectName.toLowerCase().includes('espagnol') && !g.subjectName.toLowerCase().includes('allemand'))
   );
-  // Moy. Brevet Espagnol = toutes matières sauf anglais
+  // Moyenne Brevet Espagnol = toutes matières sauf anglais
   const moyBrevEspagnol = calculateAverage(grades.filter(g => !g.subjectName.toLowerCase().includes('anglais')));
-  // Moy. Brevet Allemand = toutes matières sauf anglais
+  // Moyenne Brevet Allemand = toutes matières sauf anglais
   const moyBrevAllemand = calculateAverage(grades.filter(g => !g.subjectName.toLowerCase().includes('anglais')));
 
   // Mention auto-calculée selon la moyenne (modifiable manuellement avant impression)
@@ -380,13 +380,13 @@ export function ReportCard({
                 {isBrevet && notedCount > 0 && (
                   <div style={{ textAlign: 'left', lineHeight: '1.6' }}>
                     {hasAnglais && (
-                      <div><strong>Moy. Brevet Anglais :</strong> {formatScore(moyBrevAnglais)}</div>
+                      <div><strong>Moyenne Brevet Anglais :</strong> {formatScore(moyBrevAnglais)}</div>
                     )}
                     {hasEspagnol && (
-                      <div><strong>Moy. Brevet Espagnol :</strong> {formatScore(moyBrevEspagnol)}</div>
+                      <div><strong>Moyenne Brevet Espagnol :</strong> {formatScore(moyBrevEspagnol)}</div>
                     )}
                     {hasAllemand && (
-                      <div><strong>Moy. Brevet Allemand :</strong> {formatScore(moyBrevAllemand)}</div>
+                      <div><strong>Moyenne Brevet Allemand :</strong> {formatScore(moyBrevAllemand)}</div>
                     )}
                   </div>
                 )}

@@ -164,9 +164,9 @@ export function ClassCouncilView({ grade, term, students, subjects, onClose }: C
                   </div>
                   {isBrevet && avg > 0 && (
                     <div className="brevet-row">
-                      {hasAnglais  && <span>Moy. Brevet Anglais&nbsp;: <strong>{moyBrevAnglais.toFixed(2)}</strong></span>}
-                      {hasEspagnol && <span>Moy. Brevet Espagnol&nbsp;: <strong>{moyBrevEspagnol.toFixed(2)}</strong></span>}
-                      {hasAllemand && <span>Moy. Brevet Allemand&nbsp;: <strong>{moyBrevAllemand.toFixed(2)}</strong></span>}
+                      {hasAnglais  && <span>Moyenne Brevet Anglais&nbsp;: <strong>{moyBrevAnglais.toFixed(2)}</strong></span>}
+                      {hasEspagnol && <span>Moyenne Brevet Espagnol&nbsp;: <strong>{moyBrevEspagnol.toFixed(2)}</strong></span>}
+                      {hasAllemand && <span>Moyenne Brevet Allemand&nbsp;: <strong>{moyBrevAllemand.toFixed(2)}</strong></span>}
                     </div>
                   )}
                 </div>
