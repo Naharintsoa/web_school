@@ -101,7 +101,7 @@ export function ClassCouncilView({ grade, term, students, subjects, onClose }: C
     .map(r => ({ ...r, avg: calculateAverage(r.sg) }))
     .sort((a, b) => b.avg - a.avg);
 
-  const termLabel = (t: number) => `T${t}`;
+  const termLabel = (t: number) => `Trimestre ${t}`;
 
   return (
     <>
