@@ -1,10 +1,9 @@
 /**
- * Conseil de classe — affiche les élèves par ordre de mérite (moyenne décroissante).
- * Pour chaque élève : photo, nom, moyenne trimestrielle, moyennes Brevet (3ème/4ème),
- * et le mini-bulletin (tableau des notes identique au bulletin officiel).
+ * Conseil de classe — classement des élèves par ordre de mérite (moyenne décroissante).
+ * T2 : compare avec T1. T3 : compare avec T1 et T2.
  */
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Printer, Loader2 } from 'lucide-react';
+import { ArrowLeft, Printer, Loader2, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import type { Student } from '../../types/student';
 import type { Subject } from '../../types/subject';
 import type { Grade } from '../../types/grade';
@@ -22,7 +21,6 @@ interface ClassCouncilViewProps {
 const LANG_KEYWORDS = ['anglais', 'espagnol', 'allemand'];
 const isLang = (name: string) => LANG_KEYWORDS.some(k => name.toLowerCase().includes(k));
 
-// Styles inline identiques au bulletin officiel
 const S = {
   table:  { width: '100%', borderCollapse: 'collapse' as const, fontSize: '8pt' },
   cell:   { padding: '3px', border: '1px solid #000', verticalAlign: 'middle' as const },
@@ -30,17 +28,42 @@ const S = {
   header: { padding: '3px', border: '1px solid #000', background: '#d9d9d9', fontWeight: 'bold' as const, textAlign: 'center' as const, fontSize: '8pt', verticalAlign: 'bottom' as const },
 };
 
+/** Calcule les moyennes Brevet pour un ensemble de notes */
+function brevets(sg: Grade[]) {
+  return {
+    hasAnglais:  sg.some(g => g.subjectName?.toLowerCase().includes('anglais')),
+    hasEspagnol: sg.some(g => g.subjectName?.toLowerCase().includes('espagnol')),
+    hasAllemand: sg.some(g => g.subjectName?.toLowerCase().includes('allemand')),
+    anglais:  calculateAverage(sg.filter(g =>
+      !g.subjectName?.toLowerCase().includes('espagnol') &&
+      !g.subjectName?.toLowerCase().includes('allemand'))),
+    espagnol: calculateAverage(sg.filter(g => !g.subjectName?.toLowerCase().includes('anglais'))),
+    allemand: calculateAverage(sg.filter(g => !g.subjectName?.toLowerCase().includes('anglais'))),
+  };
+}
+
+/** Flèche de tendance entre deux valeurs */
+function Trend({ prev, curr }: { prev: number; curr: number }) {
+  if (prev <= 0 || curr <= 0) return null;
+  const diff = curr - prev;
+  const abs  = Math.abs(diff).toFixed(2);
+  if (diff > 0.05)  return <span className="trend up">   <TrendingUp  size={12} /> +{abs}</span>;
+  if (diff < -0.05) return <span className="trend down"> <TrendingDown size={12} /> -{abs}</span>;
+  return <span className="trend eq"><Minus size={12} /> ={abs}</span>;
+}
+
 export function ClassCouncilView({ grade, term, students, subjects, onClose }: ClassCouncilViewProps) {
-  const [allTermGrades, setAllTermGrades] = useState<Grade[]>([]);
+  // Toutes les notes de la classe, TOUS trimestres confondus
+  const [allGrades, setAllGrades] = useState<Grade[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const studentIds = new Set(students.map(s => s.id));
     gradesApi.getAll().then(grades => {
-      setAllTermGrades(grades.filter(g => studentIds.has(g.studentId) && g.term === term));
+      setAllGrades(grades.filter(g => studentIds.has(g.studentId)));
       setLoading(false);
     });
-  }, [students, term]);
+  }, [students]);
 
   if (loading) {
     return (
@@ -51,36 +74,38 @@ export function ClassCouncilView({ grade, term, students, subjects, onClose }: C
     );
   }
 
-  // Stats de classe par matière (pour colonne min/max/moy classe)
+  // Notes filtrées par trimestre
+  const gradesByTerm = (t: 1 | 2 | 3) => allGrades.filter(g => g.term === t);
+  const currentTermGrades = gradesByTerm(term);
+
+  // Stats de classe (trimestre courant) pour le mini-bulletin
   const classStats: Record<string, { avg: number; min: number; max: number }> = {};
   for (const subject of subjects) {
-    const sg = allTermGrades.filter(g => g.subjectId === subject.id);
-    classStats[subject.id] = calculateClassStats(sg);
+    classStats[subject.id] = calculateClassStats(
+      currentTermGrades.filter(g => g.subjectId === subject.id)
+    );
   }
+  const classAvg = calculateAverage(currentTermGrades);
 
-  // Moyenne générale de la classe (tous élèves confondus)
-  const classAvg = calculateAverage(allTermGrades);
-
-  // Classement par ordre de mérite
   const isBrevet = /^[34]/.test(grade.trim());
+  const medalColor = (i: number) => ['#f59e0b', '#94a3b8', '#b45309'][i] ?? '#6366f1';
 
+  // Classement par ordre de mérite (trimestre courant)
   const ranked = students
-    .map(student => {
-      const sg = allTermGrades.filter(g => g.studentId === student.id);
-      return { student, grades: sg, avg: calculateAverage(sg) };
-    })
+    .map(student => ({
+      student,
+      sg:  currentTermGrades.filter(g => g.studentId === student.id),
+      sg1: gradesByTerm(1).filter(g => g.studentId === student.id),
+      sg2: gradesByTerm(2).filter(g => g.studentId === student.id),
+    }))
+    .map(r => ({ ...r, avg: calculateAverage(r.sg) }))
     .sort((a, b) => b.avg - a.avg);
 
-  const medalColor = (i: number) => {
-    if (i === 0) return '#f59e0b'; // or
-    if (i === 1) return '#94a3b8'; // argent
-    if (i === 2) return '#b45309'; // bronze
-    return '#6366f1';
-  };
+  const termLabel = (t: number) => `T${t}`;
 
   return (
     <>
-      {/* ── Barre d'actions (masquée à l'impression) ── */}
+      {/* ── Barre d'actions ── */}
       <div className="no-print bg-indigo-900 text-white px-4 sm:px-6 py-3 flex items-center justify-between gap-2">
         <div className="flex items-center gap-3">
           <button onClick={onClose} className="p-1.5 hover:bg-indigo-800 rounded-lg" title="Retour">
@@ -113,38 +138,23 @@ export function ClassCouncilView({ grade, term, students, subjects, onClose }: C
           </p>
         )}
 
-        {ranked.map(({ student, grades: sg, avg }, index) => {
-          // Lignes à afficher : langues uniquement si notées
+        {ranked.map(({ student, sg, sg1, sg2, avg }, index) => {
+          const avg1 = calculateAverage(sg1);
+          const avg2 = calculateAverage(sg2);
+          const brev  = brevets(sg);
+          const brev1 = brevets(sg1);
+          const brev2 = brevets(sg2);
+
           const displayRows = subjects
             .filter(s => isLang(s.name) ? sg.some(g => g.subjectId === s.id) : true)
             .map(s => ({ subject: s, gradeRow: sg.find(g => g.subjectId === s.id) ?? null }));
 
-          // Moyennes Brevet
-          const hasAnglais  = sg.some(g => g.subjectName?.toLowerCase().includes('anglais'));
-          const hasEspagnol = sg.some(g => g.subjectName?.toLowerCase().includes('espagnol'));
-          const hasAllemand = sg.some(g => g.subjectName?.toLowerCase().includes('allemand'));
-
-          const moyBrevAnglais  = calculateAverage(sg.filter(g =>
-            !g.subjectName?.toLowerCase().includes('espagnol') &&
-            !g.subjectName?.toLowerCase().includes('allemand')
-          ));
-          const moyBrevEspagnol = calculateAverage(sg.filter(g =>
-            !g.subjectName?.toLowerCase().includes('anglais')
-          ));
-          const moyBrevAllemand = calculateAverage(sg.filter(g =>
-            !g.subjectName?.toLowerCase().includes('anglais')
-          ));
-
           return (
             <div key={student.id} className="student-card">
-              {/* En-tête élève */}
+              {/* ── En-tête élève ── */}
               <div className="student-header">
-                {/* Rang */}
-                <div className="student-rank" style={{ color: medalColor(index) }}>
-                  #{index + 1}
-                </div>
+                <div className="student-rank" style={{ color: medalColor(index) }}>#{index + 1}</div>
 
-                {/* Photo */}
                 {student.photoUrl ? (
                   <img src={student.photoUrl} alt="" className="student-photo" />
                 ) : (
@@ -153,26 +163,87 @@ export function ClassCouncilView({ grade, term, students, subjects, onClose }: C
                   </div>
                 )}
 
-                {/* Infos */}
                 <div className="student-info">
                   <div className="student-name">
                     {student.lastName?.toUpperCase()} {student.firstName}
                   </div>
-                  <div className="student-avg" style={{ color: avg >= 10 ? '#16a34a' : '#dc2626' }}>
-                    Moyenne trimestrielle&nbsp;:&nbsp;
-                    <strong>{avg > 0 ? avg.toFixed(2) : '—'}/20</strong>
+
+                  {/* Moyenne trimestrielle + comparaison */}
+                  <div className="avg-line">
+                    {/* Trimestres précédents en gris */}
+                    {term >= 2 && avg1 > 0 && (
+                      <span className="prev-avg">{termLabel(1)}&nbsp;: {avg1.toFixed(2)}</span>
+                    )}
+                    {term === 3 && avg2 > 0 && (
+                      <span className="prev-avg">{termLabel(2)}&nbsp;: {avg2.toFixed(2)}</span>
+                    )}
+                    {/* Trimestre courant */}
+                    <span style={{ color: avg >= 10 ? '#16a34a' : '#dc2626', fontWeight: 'bold' }}>
+                      {termLabel(term)}&nbsp;: {avg > 0 ? avg.toFixed(2) : '—'}/20
+                    </span>
+                    {/* Flèches de tendance */}
+                    {term === 2 && <Trend prev={avg1} curr={avg} />}
+                    {term === 3 && avg2 > 0 && <Trend prev={avg2} curr={avg} />}
+                    {term === 3 && avg2 <= 0 && avg1 > 0 && <Trend prev={avg1} curr={avg} />}
                   </div>
+
+                  {/* Moyennes Brevet + comparaison */}
                   {isBrevet && avg > 0 && (
-                    <div className="brevet-row">
-                      {hasAnglais  && <span>Moyenne Brevet Anglais&nbsp;: <strong>{moyBrevAnglais.toFixed(2)}</strong></span>}
-                      {hasEspagnol && <span>Moyenne Brevet Espagnol&nbsp;: <strong>{moyBrevEspagnol.toFixed(2)}</strong></span>}
-                      {hasAllemand && <span>Moyenne Brevet Allemand&nbsp;: <strong>{moyBrevAllemand.toFixed(2)}</strong></span>}
+                    <div className="brevet-block">
+                      {/* Anglais */}
+                      {brev.hasAnglais && (
+                        <div className="brevet-line">
+                          <span className="brevet-label">Moyenne Brevet Anglais&nbsp;:</span>
+                          {term >= 2 && brev1.hasAnglais && brev1.anglais > 0 && (
+                            <span className="prev-avg">{termLabel(1)}&nbsp;{brev1.anglais.toFixed(2)}</span>
+                          )}
+                          {term === 3 && brev2.hasAnglais && brev2.anglais > 0 && (
+                            <span className="prev-avg">{termLabel(2)}&nbsp;{brev2.anglais.toFixed(2)}</span>
+                          )}
+                          <strong>{termLabel(term)}&nbsp;{brev.anglais.toFixed(2)}</strong>
+                          {term === 2 && <Trend prev={brev1.anglais} curr={brev.anglais} />}
+                          {term === 3 && brev2.anglais > 0 && <Trend prev={brev2.anglais} curr={brev.anglais} />}
+                          {term === 3 && brev2.anglais <= 0 && <Trend prev={brev1.anglais} curr={brev.anglais} />}
+                        </div>
+                      )}
+                      {/* Espagnol */}
+                      {brev.hasEspagnol && (
+                        <div className="brevet-line">
+                          <span className="brevet-label">Moyenne Brevet Espagnol&nbsp;:</span>
+                          {term >= 2 && brev1.hasEspagnol && brev1.espagnol > 0 && (
+                            <span className="prev-avg">{termLabel(1)}&nbsp;{brev1.espagnol.toFixed(2)}</span>
+                          )}
+                          {term === 3 && brev2.hasEspagnol && brev2.espagnol > 0 && (
+                            <span className="prev-avg">{termLabel(2)}&nbsp;{brev2.espagnol.toFixed(2)}</span>
+                          )}
+                          <strong>{termLabel(term)}&nbsp;{brev.espagnol.toFixed(2)}</strong>
+                          {term === 2 && <Trend prev={brev1.espagnol} curr={brev.espagnol} />}
+                          {term === 3 && brev2.espagnol > 0 && <Trend prev={brev2.espagnol} curr={brev.espagnol} />}
+                          {term === 3 && brev2.espagnol <= 0 && <Trend prev={brev1.espagnol} curr={brev.espagnol} />}
+                        </div>
+                      )}
+                      {/* Allemand */}
+                      {brev.hasAllemand && (
+                        <div className="brevet-line">
+                          <span className="brevet-label">Moyenne Brevet Allemand&nbsp;:</span>
+                          {term >= 2 && brev1.hasAllemand && brev1.allemand > 0 && (
+                            <span className="prev-avg">{termLabel(1)}&nbsp;{brev1.allemand.toFixed(2)}</span>
+                          )}
+                          {term === 3 && brev2.hasAllemand && brev2.allemand > 0 && (
+                            <span className="prev-avg">{termLabel(2)}&nbsp;{brev2.allemand.toFixed(2)}</span>
+                          )}
+                          <strong>{termLabel(term)}&nbsp;{brev.allemand.toFixed(2)}</strong>
+                          {term === 2 && <Trend prev={brev1.allemand} curr={brev.allemand} />}
+                          {term === 3 && brev2.allemand > 0 && <Trend prev={brev2.allemand} curr={brev.allemand} />}
+                          {term === 3 && brev2.allemand <= 0 && <Trend prev={brev1.allemand} curr={brev.allemand} />}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
               </div>
 
-              {/* Mini-bulletin */}
+              {/* ── Mini-bulletin ── */}
               <table style={S.table}>
                 <thead>
                   <tr>
@@ -221,21 +292,12 @@ export function ClassCouncilView({ grade, term, students, subjects, onClose }: C
                     );
                   })}
 
-                  {/* Ligne MOYENNE */}
                   <tr style={{ background: '#f3f4f6' }}>
-                    <td style={{ ...S.cell, fontWeight: 'bold' }}>
-                      MOYENNE — Trimestre {term}
-                    </td>
-                    <td style={{ ...S.cellC, fontWeight: 'bold' }}>
-                      {avg > 0 ? avg.toFixed(2) : '—'}
-                    </td>
-                    <td style={{ ...S.cellC, fontWeight: 'bold' }}>
-                      {classAvg > 0 ? classAvg.toFixed(2) : '—'}
-                    </td>
+                    <td style={{ ...S.cell, fontWeight: 'bold' }}>MOYENNE — Trimestre {term}</td>
+                    <td style={{ ...S.cellC, fontWeight: 'bold' }}>{avg > 0 ? avg.toFixed(2) : '—'}</td>
+                    <td style={{ ...S.cellC, fontWeight: 'bold' }}>{classAvg > 0 ? classAvg.toFixed(2) : '—'}</td>
                     <td style={S.cellC} colSpan={5}></td>
                   </tr>
-
-                  {/* Absences */}
                   <tr>
                     <td style={S.cell}>Absences&nbsp;:</td>
                     <td style={S.cellC}>—</td>
@@ -284,7 +346,7 @@ export function ClassCouncilView({ grade, term, students, subjects, onClose }: C
         }
         .student-header {
           display: flex;
-          align-items: center;
+          align-items: flex-start;
           gap: 12px;
           padding: 10px 14px;
           background: #f1f5f9;
@@ -295,6 +357,7 @@ export function ClassCouncilView({ grade, term, students, subjects, onClose }: C
           font-weight: 900;
           min-width: 38px;
           text-align: center;
+          padding-top: 4px;
         }
         .student-photo {
           width: 54px;
@@ -323,27 +386,60 @@ export function ClassCouncilView({ grade, term, students, subjects, onClose }: C
           font-size: 14px;
           font-weight: bold;
           color: #1e293b;
+          margin-bottom: 4px;
         }
-        .student-avg {
-          font-size: 13px;
-          margin-top: 2px;
-        }
-        .brevet-row {
-          font-size: 11px;
-          color: #475569;
-          margin-top: 3px;
+        /* Ligne moyenne trimestrielle avec comparaison */
+        .avg-line {
           display: flex;
-          gap: 14px;
+          align-items: center;
+          gap: 8px;
+          font-size: 13px;
           flex-wrap: wrap;
+        }
+        .prev-avg {
+          color: #64748b;
+          font-size: 12px;
+          background: #e2e8f0;
+          border-radius: 4px;
+          padding: 1px 5px;
+        }
+        /* Tendance */
+        .trend {
+          display: inline-flex;
+          align-items: center;
+          gap: 2px;
+          font-size: 11px;
+          font-weight: bold;
+          padding: 1px 5px;
+          border-radius: 4px;
+        }
+        .trend.up   { color: #15803d; background: #dcfce7; }
+        .trend.down { color: #b91c1c; background: #fee2e2; }
+        .trend.eq   { color: #64748b; background: #f1f5f9; }
+        /* Bloc Brevet */
+        .brevet-block {
+          margin-top: 5px;
+          display: flex;
+          flex-direction: column;
+          gap: 3px;
+        }
+        .brevet-line {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 11px;
+          color: #334155;
+          flex-wrap: wrap;
+        }
+        .brevet-label {
+          font-style: italic;
+          color: #475569;
         }
 
         @media print {
           @page { size: A4 portrait; margin: 10mm; }
           .no-print { display: none !important; }
-          .council-wrap {
-            background: none;
-            padding: 0;
-          }
+          .council-wrap { background: none; padding: 0; }
           .student-card {
             page-break-inside: avoid;
             box-shadow: none;
@@ -351,8 +447,7 @@ export function ClassCouncilView({ grade, term, students, subjects, onClose }: C
             border-radius: 0;
             margin-bottom: 14px;
           }
-          .student-header {
-            background: #f1f5f9;
+          .student-header, .prev-avg, .trend.up, .trend.down, .trend.eq {
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
           }
