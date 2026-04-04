@@ -226,4 +226,76 @@ router.post('/purge-all', async (req, res) => {
   }
 });
 
+// ─── POST /promote ───────────────────────────────────────────────────────────
+// Passage en classe supérieure : crée de nouveaux enregistrements pour l'année
+// suivante selon la décision prise pour chaque élève.
+// Body : { fromYear, toYear, decisions: [{ studentId, decision: 'promoted'|'repeat'|'skip' }] }
+const NEXT_GRADE = {
+  PS: 'MS', MS: 'GS', GS: 'CP',
+  CP: 'CE1', CE1: 'CE2', CE2: 'CM1',
+  CM1: 'CM2', CM2: '6EME',
+  '6EME': '5EME', '5EME': '4EME', '4EME': '3EME',
+  '3EME': null,
+};
+const GRADE_CYCLE = {
+  PS: 'CYCLE1', MS: 'CYCLE1', GS: 'CYCLE1',
+  CP: 'CYCLE2', CE1: 'CYCLE2', CE2: 'CYCLE2',
+  CM1: 'CYCLE3', CM2: 'CYCLE3', '6EME': 'CYCLE3',
+  '5EME': 'CYCLE4', '4EME': 'CYCLE4', '3EME': 'CYCLE4',
+};
+
+router.post('/promote', async (req, res) => {
+  const { fromYear, toYear, decisions } = req.body;
+  if (!fromYear || !toYear || !Array.isArray(decisions)) {
+    return res.status(400).json({ message: 'fromYear, toYear et decisions sont requis.' });
+  }
+
+  let promoted = 0, repeated = 0, skipped = 0;
+  const errors = [];
+
+  for (const { studentId, decision } of decisions) {
+    if (decision === 'skip') { skipped++; continue; }
+
+    try {
+      // Charger l'élève source
+      const { rows } = await pool.query('SELECT * FROM students WHERE id = $1', [studentId]);
+      if (rows.length === 0) { errors.push(`Élève ${studentId} introuvable.`); continue; }
+      const s = rows[0];
+
+      // Déterminer la nouvelle classe
+      const newGrade = decision === 'promoted' ? (NEXT_GRADE[s.grade] ?? s.grade) : s.grade;
+      const newCycle = GRADE_CYCLE[newGrade] ?? s.cycle;
+
+      // Vérifier que cet élève n'existe pas déjà pour cette année (évite les doublons)
+      const { rows: existing } = await pool.query(
+        'SELECT id FROM students WHERE matricule = $1 AND school_year = $2',
+        [s.matricule, toYear]
+      );
+      if (existing.length > 0) { skipped++; continue; }
+
+      const newId = 'student-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
+      await pool.query(
+        `INSERT INTO students
+          (id,student_number,matricule,first_name,last_name,common_name,date_of_birth,
+           gender,nationality,birth_city,birth_country,grade,cycle,photo_url,iss_number,
+           exit_date,status,family_id,parent_info,enrollment_date,school_year)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)`,
+        [
+          newId, s.student_number, s.matricule, s.first_name, s.last_name, s.common_name,
+          s.date_of_birth, s.gender, s.nationality, s.birth_city, s.birth_country,
+          newGrade, newCycle, s.photo_url, s.iss_number,
+          null, 'actif', s.family_id,
+          s.parent_info, s.enrollment_date, toYear,
+        ]
+      );
+
+      if (decision === 'promoted') promoted++; else repeated++;
+    } catch (err) {
+      errors.push(`Erreur pour ${studentId}: ${err.message}`);
+    }
+  }
+
+  return res.json({ promoted, repeated, skipped, errors });
+});
+
 export default router;

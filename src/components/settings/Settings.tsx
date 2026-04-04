@@ -4,6 +4,7 @@
  */
 import React from 'react';
 import { Save, School, Bell, Users, CheckCircle } from 'lucide-react';
+import { PromotionPanel } from './PromotionPanel';
 import { useSchoolYear } from '../../contexts/SchoolYearContext';
 import { useToast } from '../../contexts/ToastContext';
 import { SCHOOL_YEARS } from '../../utils/schoolYears';
@@ -156,6 +157,9 @@ export function Settings() {
           </div>
         </div>
       </div>
+
+      {/* Passage en classe supérieure */}
+      <PromotionPanel />
 
       {/* Informations sur le stockage */}
       <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">

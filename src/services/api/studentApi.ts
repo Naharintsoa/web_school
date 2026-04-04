@@ -39,4 +39,15 @@ export const studentApi = {
       body: JSON.stringify({ familyId }),
     });
   },
+
+  promote: async (payload: {
+    fromYear: string;
+    toYear: string;
+    decisions: { studentId: string; decision: 'promoted' | 'repeat' | 'skip' }[];
+  }): Promise<{ promoted: number; repeated: number; skipped: number; errors: string[] }> => {
+    return apiFetch('/students/promote', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
 };
