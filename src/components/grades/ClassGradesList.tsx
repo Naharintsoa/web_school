@@ -5,10 +5,11 @@
  * - Gestion des matières (ajouter/supprimer)
  * - Génération et impression du bulletin
  */
-import React, { useState, useEffect, useCallback } from 'react';
-import { Search, Printer, ArrowLeft, Settings2, Calculator, Users } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Search, Printer, ArrowLeft, Settings2, Users, BookOpen, UserCircle } from 'lucide-react';
 import { GradeInput } from './GradeInput';
 import { SubjectManager } from './SubjectManager';
+import { SubjectGradeEntry } from './SubjectGradeEntry';
 import { ReportCard } from './report-card/ReportCard';
 import { ClassCouncilView } from './ClassCouncilView';
 import { useSchoolYear } from '../../contexts/SchoolYearContext';
@@ -43,6 +44,7 @@ export function ClassGradesList({ grade, onBack }: ClassGradesListProps) {
   const [showReportCard, setShowReportCard] = useState(false);
   const [showSubjectManager, setShowSubjectManager] = useState(false);
   const [showCouncil, setShowCouncil] = useState(false);
+  const [entryMode, setEntryMode] = useState<'student' | 'subject'>('student');
 
   // Professeur principal de la classe
   const principalTeacher = (() => {
@@ -206,6 +208,32 @@ export function ClassGradesList({ grade, onBack }: ClassGradesListProps) {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {/* Toggle Par élève / Par matière */}
+            <div className="flex rounded-lg border border-gray-300 overflow-hidden text-sm">
+              <button
+                onClick={() => setEntryMode('student')}
+                className={`flex items-center gap-1.5 px-3 py-2 transition-colors ${
+                  entryMode === 'student'
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-white text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                <UserCircle size={15} />
+                <span className="hidden sm:inline">Par élève</span>
+              </button>
+              <button
+                onClick={() => setEntryMode('subject')}
+                className={`flex items-center gap-1.5 px-3 py-2 border-l border-gray-300 transition-colors ${
+                  entryMode === 'subject'
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-white text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                <BookOpen size={15} />
+                <span className="hidden sm:inline">Par matière</span>
+              </button>
+            </div>
+
             <button
               onClick={() => setShowSubjectManager(true)}
               className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
@@ -220,7 +248,7 @@ export function ClassGradesList({ grade, onBack }: ClassGradesListProps) {
               <Users size={16} />
               <span className="hidden sm:inline">Conseil de classe</span>
             </button>
-            {selectedStudent && (
+            {selectedStudent && entryMode === 'student' && (
               <button
                 onClick={() => setShowReportCard(true)}
                 className="flex items-center gap-2 px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
@@ -249,19 +277,33 @@ export function ClassGradesList({ grade, onBack }: ClassGradesListProps) {
           ))}
         </div>
 
-        {/* Recherche */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-          <input
-            type="text"
-            placeholder="Rechercher un élève…"
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-          />
-        </div>
+        {/* Recherche — uniquement en mode "par élève" */}
+        {entryMode === 'student' && (
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+            <input
+              type="text"
+              placeholder="Rechercher un élève…"
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            />
+          </div>
+        )}
       </div>
 
+      {/* ── Vue PAR MATIÈRE ── */}
+      {entryMode === 'subject' && (
+        <SubjectGradeEntry
+          students={students}
+          subjects={subjects}
+          term={selectedTerm}
+          grade={grade}
+        />
+      )}
+
+      {/* ── Vue PAR ÉLÈVE ── */}
+      {entryMode === 'student' && (
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Liste élèves */}
         <div className="bg-white rounded-xl shadow p-4">
@@ -349,6 +391,7 @@ export function ClassGradesList({ grade, onBack }: ClassGradesListProps) {
           </div>
         )}
       </div>
+      )}
 
       {showSubjectManager && (
         <SubjectManager
