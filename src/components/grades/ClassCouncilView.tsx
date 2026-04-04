@@ -3,12 +3,14 @@
  * T2 : compare avec T1. T3 : compare avec T1 et T2.
  */
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Printer, Loader2, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { ArrowLeft, Printer, Loader2, TrendingUp, TrendingDown, Minus, MonitorPlay } from 'lucide-react';
 import type { Student } from '../../types/student';
 import type { Subject } from '../../types/subject';
 import type { Grade } from '../../types/grade';
 import { gradesApi } from '../../services/api';
 import { calculateAverage, calculateClassStats, getGradeLevel } from '../../utils/grades';
+import { CouncilDiapo } from './CouncilDiapo';
+import type { StudentSlide } from './CouncilDiapo';
 
 interface ClassCouncilViewProps {
   grade: string;
@@ -56,6 +58,7 @@ export function ClassCouncilView({ grade, term, students, subjects, onClose }: C
   // Toutes les notes de la classe, TOUS trimestres confondus
   const [allGrades, setAllGrades] = useState<Grade[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showDiapo, setShowDiapo] = useState(false);
 
   useEffect(() => {
     const studentIds = new Set(students.map(s => s.id));
@@ -103,6 +106,34 @@ export function ClassCouncilView({ grade, term, students, subjects, onClose }: C
 
   const termLabel = (t: number) => `Trimestre ${t}`;
 
+  // Slides pour le diaporama (ordre de mérite)
+  const slides: StudentSlide[] = ranked.map((r, i) => ({
+    student: r.student,
+    rank: i + 1,
+    avg: r.avg,
+    avg1: calculateAverage(r.sg1),
+    avg2: calculateAverage(r.sg2),
+    sg: r.sg,
+    brev:  brevets(r.sg),
+    brev1: brevets(r.sg1),
+    brev2: brevets(r.sg2),
+  }));
+
+  if (showDiapo) {
+    return (
+      <CouncilDiapo
+        slides={slides}
+        term={term}
+        grade={grade}
+        subjects={subjects}
+        classStats={classStats}
+        classAvg={classAvg}
+        isBrevet={isBrevet}
+        onClose={() => setShowDiapo(false)}
+      />
+    );
+  }
+
   return (
     <>
       {/* ── Barre d'actions ── */}
@@ -117,6 +148,13 @@ export function ClassCouncilView({ grade, term, students, subjects, onClose }: C
             <span className="text-indigo-400 text-xs ml-2">({ranked.length} élève{ranked.length > 1 ? 's' : ''})</span>
           </div>
         </div>
+        <button
+          onClick={() => setShowDiapo(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-lg text-sm font-medium"
+        >
+          <MonitorPlay size={16} />
+          Diaporama
+        </button>
         <button
           onClick={() => window.print()}
           className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg text-sm font-medium"

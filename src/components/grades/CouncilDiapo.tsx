@@ -1,0 +1,355 @@
+/**
+ * Diaporama du Conseil de classe.
+ * Plein écran, navigation manuelle, par ordre de mérite.
+ * Conçu pour projection sur écran/projecteur.
+ */
+import { useState, useEffect, useCallback } from 'react';
+import { ChevronLeft, ChevronRight, X, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import type { Student } from '../../types/student';
+import type { Subject } from '../../types/subject';
+import type { Grade } from '../../types/grade';
+import { getGradeLevel } from '../../utils/grades';
+
+export interface StudentSlide {
+  student: Student;
+  rank: number;
+  avg: number;
+  avg1: number;
+  avg2: number;
+  sg: Grade[];
+  brev:  BrevetAvg;
+  brev1: BrevetAvg;
+  brev2: BrevetAvg;
+}
+
+export interface BrevetAvg {
+  hasAnglais: boolean;
+  hasEspagnol: boolean;
+  hasAllemand: boolean;
+  anglais: number;
+  espagnol: number;
+  allemand: number;
+}
+
+interface CouncilDiapoProps {
+  slides: StudentSlide[];
+  term: 1 | 2 | 3;
+  grade: string;
+  subjects: Subject[];
+  classStats: Record<string, { avg: number; min: number; max: number }>;
+  classAvg: number;
+  isBrevet: boolean;
+  onClose: () => void;
+}
+
+const termLabel = (t: number) => `Trimestre ${t}`;
+const medalEmoji = (r: number) => r === 1 ? '🥇' : r === 2 ? '🥈' : r === 3 ? '🥉' : `#${r}`;
+
+function TrendBadge({ prev, curr }: { prev: number; curr: number }) {
+  if (prev <= 0 || curr <= 0) return null;
+  const diff = curr - prev;
+  const abs = Math.abs(diff).toFixed(2);
+  if (diff > 0.05)  return <span style={tw.trendUp}><TrendingUp size={18} /> +{abs}</span>;
+  if (diff < -0.05) return <span style={tw.trendDown}><TrendingDown size={18} /> -{abs}</span>;
+  return <span style={tw.trendEq}><Minus size={18} /> stable</span>;
+}
+
+// Styles inline (projecteur : gros, lisible, contrasté)
+const tw = {
+  overlay: {
+    position: 'fixed' as const,
+    inset: 0,
+    zIndex: 9999,
+    background: '#fff',
+    display: 'flex',
+    flexDirection: 'column' as const,
+    fontFamily: "'Times New Roman', Times, serif",
+    overflow: 'hidden',
+  },
+  topBar: {
+    background: '#09438a',
+    color: '#fff',
+    padding: '10px 24px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    flexShrink: 0,
+  },
+  topTitle: { fontSize: '16px', fontWeight: 'bold', letterSpacing: '0.5px' },
+  topClose: {
+    display: 'flex', alignItems: 'center', gap: '6px',
+    background: 'rgba(255,255,255,0.15)', border: 'none',
+    color: '#fff', padding: '6px 14px', borderRadius: '8px',
+    cursor: 'pointer', fontSize: '14px',
+  },
+  body: {
+    flex: 1,
+    display: 'flex',
+    alignItems: 'stretch',
+    overflow: 'hidden',
+  },
+  // Colonne gauche : photo + rang
+  leftCol: {
+    width: '260px',
+    flexShrink: 0,
+    display: 'flex',
+    flexDirection: 'column' as const,
+    alignItems: 'center',
+    justifyContent: 'center',
+    background: '#f0f4f8',
+    padding: '20px',
+    borderRight: '2px solid #e2e8f0',
+    gap: '12px',
+  },
+  rankBadge: { fontSize: '52px', fontWeight: 900, lineHeight: 1 },
+  photo: {
+    width: '160px', height: '160px', borderRadius: '50%',
+    objectFit: 'cover' as const, border: '5px solid #2097bf',
+  },
+  avatar: {
+    width: '160px', height: '160px', borderRadius: '50%',
+    background: '#dbeafe', color: '#1d4ed8',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    fontSize: '60px', fontWeight: 'bold', border: '5px solid #2097bf',
+  },
+  // Colonne droite : infos
+  rightCol: {
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column' as const,
+    padding: '24px 32px',
+    overflowY: 'auto' as const,
+    gap: '14px',
+  },
+  name: { fontSize: '36px', fontWeight: 'bold', color: '#1e293b', lineHeight: 1.2 },
+  avgBlock: {
+    display: 'flex', flexDirection: 'column' as const, gap: '6px',
+    padding: '14px 18px', background: '#f8fafc',
+    border: '2px solid #e2e8f0', borderRadius: '10px',
+  },
+  avgLabel: { fontSize: '13px', color: '#64748b', textTransform: 'uppercase' as const, letterSpacing: '0.5px' },
+  avgRow: { display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' as const },
+  prevAvg: {
+    fontSize: '18px', color: '#64748b',
+    background: '#e2e8f0', borderRadius: '6px', padding: '3px 10px',
+  },
+  currAvg: (ok: boolean): React.CSSProperties => ({
+    fontSize: '42px', fontWeight: 900,
+    color: ok ? '#16a34a' : '#dc2626',
+    lineHeight: 1,
+  }),
+  trendUp:   { display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '18px', fontWeight: 'bold', color: '#15803d', background: '#dcfce7', borderRadius: '6px', padding: '4px 10px' },
+  trendDown: { display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '18px', fontWeight: 'bold', color: '#b91c1c', background: '#fee2e2', borderRadius: '6px', padding: '4px 10px' },
+  trendEq:   { display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '18px', fontWeight: 'bold', color: '#64748b', background: '#f1f5f9', borderRadius: '6px', padding: '4px 10px' },
+  brevBlock: {
+    display: 'flex', flexDirection: 'column' as const, gap: '6px',
+    padding: '10px 14px', background: '#eff6ff',
+    border: '1.5px solid #bfdbfe', borderRadius: '8px',
+  },
+  brevTitle: { fontSize: '12px', color: '#1d4ed8', fontWeight: 'bold', textTransform: 'uppercase' as const, marginBottom: '2px' },
+  brevLine: { display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' as const, fontSize: '17px' },
+  // Tableau notes (compact pour proj)
+  table: { width: '100%', borderCollapse: 'collapse' as const, fontSize: '11pt', marginTop: '4px' },
+  th: { padding: '4px 6px', border: '1px solid #000', background: '#d9d9d9', fontWeight: 'bold' as const, textAlign: 'center' as const, fontSize: '9pt' },
+  td: { padding: '4px 6px', border: '1px solid #000', verticalAlign: 'middle' as const, fontSize: '10pt' },
+  tdC: { padding: '4px 6px', border: '1px solid #000', textAlign: 'center' as const, verticalAlign: 'middle' as const, fontSize: '10pt' },
+  // Barre navigation
+  navBar: {
+    background: '#09438a',
+    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+    padding: '10px 24px', flexShrink: 0, gap: '12px',
+  },
+  navBtn: (disabled: boolean): React.CSSProperties => ({
+    display: 'flex', alignItems: 'center', gap: '6px',
+    padding: '10px 24px', borderRadius: '8px', border: 'none', cursor: disabled ? 'not-allowed' : 'pointer',
+    fontWeight: 'bold', fontSize: '15px',
+    background: disabled ? '#1e3a5f' : '#2563eb',
+    color: disabled ? '#64748b' : '#fff',
+    transition: 'background 0.15s',
+  }),
+  navCounter: { color: '#fff', fontSize: '18px', fontWeight: 'bold' },
+};
+
+const LANG_KW = ['anglais', 'espagnol', 'allemand'];
+const isLang = (n: string) => LANG_KW.some(k => n.toLowerCase().includes(k));
+
+export function CouncilDiapo({
+  slides, term, grade, subjects, classStats, classAvg, isBrevet, onClose,
+}: CouncilDiapoProps) {
+  const [idx, setIdx] = useState(0);
+
+  const prev = useCallback(() => setIdx(i => Math.max(0, i - 1)), []);
+  const next = useCallback(() => setIdx(i => Math.min(slides.length - 1, i + 1)), [slides.length]);
+
+  // Navigation clavier
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') next();
+      else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') prev();
+      else if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [next, prev, onClose]);
+
+  if (slides.length === 0) return null;
+
+  const { student, rank, avg, avg1, avg2, sg, brev, brev1, brev2 } = slides[idx];
+
+  const displayRows = subjects
+    .filter(s => isLang(s.name) ? sg.some(g => g.subjectId === s.id) : true)
+    .map(s => ({ subject: s, gradeRow: sg.find(g => g.subjectId === s.id) ?? null }));
+
+  return (
+    <div style={tw.overlay}>
+      {/* ── Barre supérieure ── */}
+      <div style={tw.topBar}>
+        <span style={tw.topTitle}>
+          Conseil de classe — {grade} — {termLabel(term)}
+        </span>
+        <button style={tw.topClose} onClick={onClose}>
+          <X size={16} /> Quitter le diaporama
+        </button>
+      </div>
+
+      {/* ── Contenu principal ── */}
+      <div style={tw.body}>
+        {/* Colonne gauche : rang + photo */}
+        <div style={tw.leftCol}>
+          <div style={tw.rankBadge}>{medalEmoji(rank)}</div>
+          {student.photoUrl ? (
+            <img src={student.photoUrl} alt="" style={tw.photo} />
+          ) : (
+            <div style={tw.avatar}>
+              {student.firstName?.[0]}{student.lastName?.[0]}
+            </div>
+          )}
+          <div style={{ fontSize: '16px', color: '#475569', textAlign: 'center' }}>
+            {rank === 1 ? '1ère place' : `${rank}ème place`}
+          </div>
+        </div>
+
+        {/* Colonne droite : infos */}
+        <div style={tw.rightCol}>
+          {/* Nom */}
+          <div style={tw.name}>
+            {student.lastName?.toUpperCase()}&nbsp;{student.firstName}
+          </div>
+
+          {/* Moyenne trimestrielle */}
+          <div style={tw.avgBlock}>
+            <div style={tw.avgLabel}>Moyenne trimestrielle</div>
+            <div style={tw.avgRow}>
+              {term >= 2 && avg1 > 0 && (
+                <span style={tw.prevAvg}>{termLabel(1)}&nbsp;: {avg1.toFixed(2)}</span>
+              )}
+              {term === 3 && avg2 > 0 && (
+                <span style={tw.prevAvg}>{termLabel(2)}&nbsp;: {avg2.toFixed(2)}</span>
+              )}
+              <span style={tw.currAvg(avg >= 10)}>
+                {avg > 0 ? avg.toFixed(2) : '—'}<span style={{ fontSize: '22px' }}>/20</span>
+              </span>
+              {term === 2 && <TrendBadge prev={avg1} curr={avg} />}
+              {term === 3 && <TrendBadge prev={avg2 > 0 ? avg2 : avg1} curr={avg} />}
+            </div>
+          </div>
+
+          {/* Moyennes Brevet */}
+          {isBrevet && avg > 0 && (brev.hasAnglais || brev.hasEspagnol || brev.hasAllemand) && (
+            <div style={tw.brevBlock}>
+              <div style={tw.brevTitle}>Moyennes Brevet</div>
+              {brev.hasAnglais && (
+                <div style={tw.brevLine}>
+                  <span style={{ color: '#1d4ed8', fontWeight: 'bold' }}>Anglais :</span>
+                  {term >= 2 && brev1.anglais > 0 && <span style={{ ...tw.prevAvg, fontSize: '15px' }}>{termLabel(1)} {brev1.anglais.toFixed(2)}</span>}
+                  {term === 3 && brev2.anglais > 0 && <span style={{ ...tw.prevAvg, fontSize: '15px' }}>{termLabel(2)} {brev2.anglais.toFixed(2)}</span>}
+                  <strong>{brev.anglais.toFixed(2)}</strong>
+                  <TrendBadge prev={term === 3 && brev2.anglais > 0 ? brev2.anglais : brev1.anglais} curr={brev.anglais} />
+                </div>
+              )}
+              {brev.hasEspagnol && (
+                <div style={tw.brevLine}>
+                  <span style={{ color: '#1d4ed8', fontWeight: 'bold' }}>Espagnol :</span>
+                  {term >= 2 && brev1.espagnol > 0 && <span style={{ ...tw.prevAvg, fontSize: '15px' }}>{termLabel(1)} {brev1.espagnol.toFixed(2)}</span>}
+                  {term === 3 && brev2.espagnol > 0 && <span style={{ ...tw.prevAvg, fontSize: '15px' }}>{termLabel(2)} {brev2.espagnol.toFixed(2)}</span>}
+                  <strong>{brev.espagnol.toFixed(2)}</strong>
+                  <TrendBadge prev={term === 3 && brev2.espagnol > 0 ? brev2.espagnol : brev1.espagnol} curr={brev.espagnol} />
+                </div>
+              )}
+              {brev.hasAllemand && (
+                <div style={tw.brevLine}>
+                  <span style={{ color: '#1d4ed8', fontWeight: 'bold' }}>Allemand :</span>
+                  {term >= 2 && brev1.allemand > 0 && <span style={{ ...tw.prevAvg, fontSize: '15px' }}>{termLabel(1)} {brev1.allemand.toFixed(2)}</span>}
+                  {term === 3 && brev2.allemand > 0 && <span style={{ ...tw.prevAvg, fontSize: '15px' }}>{termLabel(2)} {brev2.allemand.toFixed(2)}</span>}
+                  <strong>{brev.allemand.toFixed(2)}</strong>
+                  <TrendBadge prev={term === 3 && brev2.allemand > 0 ? brev2.allemand : brev1.allemand} curr={brev.allemand} />
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Tableau des notes */}
+          <table style={tw.table}>
+            <thead>
+              <tr>
+                <th style={{ ...tw.th, textAlign: 'left', width: '28%' }}>
+                  DISCIPLINE / Professeur
+                </th>
+                <th style={tw.th}>Élève</th>
+                <th style={tw.th}>Classe</th>
+                <th style={tw.th}>Coef</th>
+                <th style={tw.th}>min</th>
+                <th style={tw.th}>max</th>
+                <th style={tw.th}>Niveau</th>
+                <th style={{ ...tw.th, width: '20%' }}>Appréciations</th>
+              </tr>
+            </thead>
+            <tbody>
+              {displayRows.map(({ subject, gradeRow }) => {
+                const cs = classStats[subject.id];
+                const score = gradeRow?.score;
+                const hasScore = score !== undefined && score !== null && !isNaN(score);
+                return (
+                  <tr key={subject.id}>
+                    <td style={tw.td}>
+                      <div style={{ fontWeight: 'bold' }}>{subject.name}</div>
+                      <div style={{ color: '#4f81be', fontSize: '9pt' }}>{subject.teacherName ?? ''}</div>
+                    </td>
+                    <td style={tw.tdC}>{hasScore ? score!.toFixed(2) : '—'}</td>
+                    <td style={tw.tdC}>{cs?.avg > 0 ? cs.avg.toFixed(2) : '—'}</td>
+                    <td style={{ ...tw.tdC, color: subject.coefficient === 1 ? '#4f81be' : undefined }}>
+                      {subject.coefficient}
+                    </td>
+                    <td style={tw.tdC}>{cs?.min > 0 ? cs.min.toFixed(2) : '—'}</td>
+                    <td style={tw.tdC}>{cs?.max > 0 ? cs.max.toFixed(2) : '—'}</td>
+                    <td style={tw.tdC}>{hasScore ? getGradeLevel(score!) : '—'}</td>
+                    <td style={tw.td}>{gradeRow?.comments ?? ''}</td>
+                  </tr>
+                );
+              })}
+              <tr style={{ background: '#f3f4f6' }}>
+                <td style={{ ...tw.td, fontWeight: 'bold' }}>MOYENNE — {termLabel(term)}</td>
+                <td style={{ ...tw.tdC, fontWeight: 'bold' }}>{avg > 0 ? avg.toFixed(2) : '—'}</td>
+                <td style={{ ...tw.tdC, fontWeight: 'bold' }}>{classAvg > 0 ? classAvg.toFixed(2) : '—'}</td>
+                <td style={tw.tdC} colSpan={5}></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* ── Barre de navigation ── */}
+      <div style={tw.navBar}>
+        <button style={tw.navBtn(idx === 0)} onClick={prev} disabled={idx === 0}>
+          <ChevronLeft size={20} /> Précédent
+        </button>
+        <span style={tw.navCounter}>
+          {idx + 1} / {slides.length}
+        </span>
+        <button style={tw.navBtn(idx === slides.length - 1)} onClick={next} disabled={idx === slides.length - 1}>
+          Suivant <ChevronRight size={20} />
+        </button>
+      </div>
+    </div>
+  );
+}
