@@ -238,7 +238,7 @@ export function ClassCouncilView({ grade, term, students, subjects, onClose }: C
                           {term === 3 && brev2.hasAnglais && brev2.anglais > 0 && (
                             <span className="prev-avg">{termLabel(2)}&nbsp;:&nbsp;{brev2.anglais.toFixed(2)}</span>
                           )}
-                          <strong>{termLabel(term)}&nbsp;{brev.anglais.toFixed(2)}</strong>
+                          <strong>{termLabel(term)}&nbsp;:&nbsp;{brev.anglais.toFixed(2)}</strong>
                           {term === 2 && <Trend prev={brev1.anglais} curr={brev.anglais} />}
                           {term === 3 && brev2.anglais > 0 && <Trend prev={brev2.anglais} curr={brev.anglais} />}
                           {term === 3 && brev2.anglais <= 0 && <Trend prev={brev1.anglais} curr={brev.anglais} />}
@@ -254,7 +254,7 @@ export function ClassCouncilView({ grade, term, students, subjects, onClose }: C
                           {term === 3 && brev2.hasEspagnol && brev2.espagnol > 0 && (
                             <span className="prev-avg">{termLabel(2)}&nbsp;:&nbsp;{brev2.espagnol.toFixed(2)}</span>
                           )}
-                          <strong>{termLabel(term)}&nbsp;{brev.espagnol.toFixed(2)}</strong>
+                          <strong>{termLabel(term)}&nbsp;:&nbsp;{brev.espagnol.toFixed(2)}</strong>
                           {term === 2 && <Trend prev={brev1.espagnol} curr={brev.espagnol} />}
                           {term === 3 && brev2.espagnol > 0 && <Trend prev={brev2.espagnol} curr={brev.espagnol} />}
                           {term === 3 && brev2.espagnol <= 0 && <Trend prev={brev1.espagnol} curr={brev.espagnol} />}
@@ -270,7 +270,7 @@ export function ClassCouncilView({ grade, term, students, subjects, onClose }: C
                           {term === 3 && brev2.hasAllemand && brev2.allemand > 0 && (
                             <span className="prev-avg">{termLabel(2)}&nbsp;:&nbsp;{brev2.allemand.toFixed(2)}</span>
                           )}
-                          <strong>{termLabel(term)}&nbsp;{brev.allemand.toFixed(2)}</strong>
+                          <strong>{termLabel(term)}&nbsp;:&nbsp;{brev.allemand.toFixed(2)}</strong>
                           {term === 2 && <Trend prev={brev1.allemand} curr={brev.allemand} />}
                           {term === 3 && brev2.allemand > 0 && <Trend prev={brev2.allemand} curr={brev.allemand} />}
                           {term === 3 && brev2.allemand <= 0 && <Trend prev={brev1.allemand} curr={brev.allemand} />}

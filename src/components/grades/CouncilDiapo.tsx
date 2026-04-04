@@ -263,7 +263,7 @@ export function CouncilDiapo({
                   <span style={{ color: '#1d4ed8', fontWeight: 'bold' }}>Anglais :</span>
                   {term >= 2 && brev1.anglais > 0 && <span style={{ ...tw.prevAvg, fontSize: '15px' }}>{termLabel(1)} : {brev1.anglais.toFixed(2)}</span>}
                   {term === 3 && brev2.anglais > 0 && <span style={{ ...tw.prevAvg, fontSize: '15px' }}>{termLabel(2)} : {brev2.anglais.toFixed(2)}</span>}
-                  <strong>{brev.anglais.toFixed(2)}</strong>
+                  <strong>{termLabel(term)} : {brev.anglais.toFixed(2)}</strong>
                   <TrendBadge prev={term === 3 && brev2.anglais > 0 ? brev2.anglais : brev1.anglais} curr={brev.anglais} />
                 </div>
               )}
@@ -272,7 +272,7 @@ export function CouncilDiapo({
                   <span style={{ color: '#1d4ed8', fontWeight: 'bold' }}>Espagnol :</span>
                   {term >= 2 && brev1.espagnol > 0 && <span style={{ ...tw.prevAvg, fontSize: '15px' }}>{termLabel(1)} : {brev1.espagnol.toFixed(2)}</span>}
                   {term === 3 && brev2.espagnol > 0 && <span style={{ ...tw.prevAvg, fontSize: '15px' }}>{termLabel(2)} : {brev2.espagnol.toFixed(2)}</span>}
-                  <strong>{brev.espagnol.toFixed(2)}</strong>
+                  <strong>{termLabel(term)} : {brev.espagnol.toFixed(2)}</strong>
                   <TrendBadge prev={term === 3 && brev2.espagnol > 0 ? brev2.espagnol : brev1.espagnol} curr={brev.espagnol} />
                 </div>
               )}
@@ -281,7 +281,7 @@ export function CouncilDiapo({
                   <span style={{ color: '#1d4ed8', fontWeight: 'bold' }}>Allemand :</span>
                   {term >= 2 && brev1.allemand > 0 && <span style={{ ...tw.prevAvg, fontSize: '15px' }}>{termLabel(1)} : {brev1.allemand.toFixed(2)}</span>}
                   {term === 3 && brev2.allemand > 0 && <span style={{ ...tw.prevAvg, fontSize: '15px' }}>{termLabel(2)} : {brev2.allemand.toFixed(2)}</span>}
-                  <strong>{brev.allemand.toFixed(2)}</strong>
+                  <strong>{termLabel(term)} : {brev.allemand.toFixed(2)}</strong>
                   <TrendBadge prev={term === 3 && brev2.allemand > 0 ? brev2.allemand : brev1.allemand} curr={brev.allemand} />
                 </div>
               )}
