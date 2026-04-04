@@ -592,7 +592,7 @@ export function ImportPage() {
             address: row.address || '',
           },
           enrollmentDate: row.enrollmentDate || today,
-          schoolYear: importYear,
+          schoolYear: row.schoolYear || importYear,
         };
         await studentApi.create(studentData);
         if (row.matricule) existingMatricules.add(row.matricule);
