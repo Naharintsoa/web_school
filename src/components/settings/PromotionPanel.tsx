@@ -91,10 +91,13 @@ export function PromotionPanel() {
       setStudents(list);
       // Par défaut : tous passent (sauf 3EME → skip car fin de cursus)
       const init: Record<string, Decision> = {};
+      const initCollapsed: Record<string, boolean> = {};
       for (const s of list) {
         init[s.id] = NEXT_GRADE[s.grade] === null ? 'skip' : 'promoted';
+        initCollapsed[s.grade] = true; // toutes les classes fermées par défaut
       }
       setDecisions(init);
+      setCollapsed(initCollapsed);
     } catch {
       showToast('Erreur lors du chargement des élèves', 'error');
     } finally {
@@ -230,82 +233,99 @@ export function PromotionPanel() {
               {grouped.map(({ grade, list }) => {
                 const next = NEXT_GRADE[grade];
                 const open = !collapsed[grade];
+
+                // Mini-résumé pour l'en-tête fermé
+                const cp = list.filter(s => decisions[s.id] === 'promoted').length;
+                const cr = list.filter(s => decisions[s.id] === 'repeat').length;
+                const cs = list.filter(s => decisions[s.id] === 'skip').length;
+
                 return (
                   <div key={grade} className="border border-gray-200 rounded-lg overflow-hidden">
-                    {/* En-tête de classe */}
+                    {/* En-tête de classe — clic pour ouvrir/fermer */}
                     <div
-                      className="flex items-center justify-between px-4 py-2 bg-gray-50 cursor-pointer select-none"
+                      className="flex items-center justify-between px-4 py-3 bg-gray-50 cursor-pointer select-none hover:bg-gray-100 transition-colors"
                       onClick={() => setCollapsed(p => ({ ...p, [grade]: !p[grade] }))}
                     >
-                      <div className="flex items-center gap-3">
-                        {open ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                        <span className="font-semibold text-gray-800">{grade}</span>
-                        <span className="text-xs text-gray-500">{list.length} élève(s)</span>
-                        {next && (
-                          <span className="text-xs text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
-                            → {next}
-                          </span>
+                      <div className="flex items-center gap-3 flex-wrap">
+                        {open ? <ChevronUp size={16} className="text-gray-500" /> : <ChevronDown size={16} className="text-gray-500" />}
+                        <span className="font-semibold text-gray-800 text-base">{grade}</span>
+                        <span className="text-xs text-gray-500 bg-white border border-gray-200 px-2 py-0.5 rounded-full">
+                          {list.length} élève(s)
+                        </span>
+                        {next ? (
+                          <span className="text-xs text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">→ {next}</span>
+                        ) : (
+                          <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">Fin de cursus</span>
                         )}
-                        {!next && (
-                          <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
-                            Fin de cursus
+                        {/* Résumé des décisions (visible quand fermé) */}
+                        {!open && (
+                          <span className="text-xs text-gray-500 flex gap-2 ml-1">
+                            {cp > 0 && <span className="text-green-700">{cp} passe{cp > 1 ? 'nt' : ''}</span>}
+                            {cr > 0 && <span className="text-amber-700">{cr} redouble{cr > 1 ? 'nt' : ''}</span>}
+                            {cs > 0 && <span className="text-red-600">{cs} non réinscrit{cs > 1 ? 's' : ''}</span>}
                           </span>
                         )}
                       </div>
-                      {/* Boutons "Tout…" pour la classe */}
-                      <div className="flex gap-2" onClick={e => e.stopPropagation()}>
-                        <button type="button" onClick={() => setAll(grade, 'promoted')}
-                          className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200">
-                          Tous passent
-                        </button>
-                        <button type="button" onClick={() => setAll(grade, 'repeat')}
-                          className="text-xs px-2 py-1 bg-amber-100 text-amber-700 rounded hover:bg-amber-200">
-                          Tous redoublent
-                        </button>
-                        <button type="button" onClick={() => setAll(grade, 'skip')}
-                          className="text-xs px-2 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200">
-                          Aucun réinscrit
-                        </button>
-                      </div>
+                      <ChevronDown size={16} className={`text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`} />
                     </div>
 
-                    {/* Lignes élèves */}
+                    {/* Zone dépliée : boutons de lot + liste des élèves */}
                     {open && (
-                      <div className="divide-y divide-gray-100">
-                        {list.map(s => {
-                          const d = decisions[s.id] ?? 'promoted';
-                          const nextG = d === 'promoted' ? (NEXT_GRADE[s.grade] ?? s.grade) : d === 'repeat' ? s.grade : null;
-                          return (
-                            <div key={s.id} className="flex items-center justify-between px-4 py-2 hover:bg-gray-50">
-                              <div className="flex items-center gap-3 min-w-0">
-                                {avatar(s)}
-                                <div className="min-w-0">
-                                  <div className="text-sm font-medium text-gray-800 truncate">
-                                    {s.lastName?.toUpperCase()} {s.firstName}
-                                  </div>
-                                  <div className="text-xs text-gray-500 flex items-center gap-1">
-                                    <span>{s.grade}</span>
-                                    {nextG && d !== 'skip' && (
-                                      <>
-                                        <ArrowRight size={10} />
-                                        <span className={d === 'repeat' ? 'text-amber-600 font-medium' : 'text-emerald-600 font-medium'}>
-                                          {nextG}{d === 'repeat' ? ' (redouble)' : ''}
+                      <>
+                        {/* Boutons de lot — en haut de la liste */}
+                        <div className="flex items-center gap-2 px-4 py-2 bg-gray-50 border-t border-gray-200">
+                          <span className="text-xs text-gray-500 mr-1">Appliquer à tous :</span>
+                          <button type="button" onClick={() => setAll(grade, 'promoted')}
+                            className="text-xs px-3 py-1 bg-green-100 text-green-700 rounded-full hover:bg-green-200 font-medium transition-colors">
+                            Tous passent
+                          </button>
+                          <button type="button" onClick={() => setAll(grade, 'repeat')}
+                            className="text-xs px-3 py-1 bg-amber-100 text-amber-700 rounded-full hover:bg-amber-200 font-medium transition-colors">
+                            Tous redoublent
+                          </button>
+                          <button type="button" onClick={() => setAll(grade, 'skip')}
+                            className="text-xs px-3 py-1 bg-red-100 text-red-700 rounded-full hover:bg-red-200 font-medium transition-colors">
+                            Aucun réinscrit
+                          </button>
+                        </div>
+
+                        {/* Lignes élèves */}
+                        <div className="divide-y divide-gray-100">
+                          {list.map(s => {
+                            const d = decisions[s.id] ?? 'promoted';
+                            const nextG = d === 'promoted' ? (NEXT_GRADE[s.grade] ?? s.grade) : d === 'repeat' ? s.grade : null;
+                            return (
+                              <div key={s.id} className="flex items-center justify-between px-4 py-2.5 hover:bg-gray-50">
+                                <div className="flex items-center gap-3 min-w-0">
+                                  {avatar(s)}
+                                  <div className="min-w-0">
+                                    <div className="text-sm font-medium text-gray-800 truncate">
+                                      {s.lastName?.toUpperCase()} {s.firstName}
+                                    </div>
+                                    <div className="text-xs text-gray-500 flex items-center gap-1">
+                                      <span>{s.grade}</span>
+                                      {nextG && d !== 'skip' && (
+                                        <>
+                                          <ArrowRight size={10} />
+                                          <span className={d === 'repeat' ? 'text-amber-600 font-medium' : 'text-emerald-600 font-medium'}>
+                                            {nextG}{d === 'repeat' ? ' (redouble)' : ''}
+                                          </span>
+                                        </>
+                                      )}
+                                      {d === 'skip' && (
+                                        <span className="text-red-500 font-medium ml-1 flex items-center gap-1">
+                                          <UserX size={10} /> Non réinscrit
                                         </span>
-                                      </>
-                                    )}
-                                    {d === 'skip' && (
-                                      <span className="text-red-500 font-medium ml-1 flex items-center gap-1">
-                                        <UserX size={10} /> Non réinscrit
-                                      </span>
-                                    )}
+                                      )}
+                                    </div>
                                   </div>
                                 </div>
+                                <DecisionBadge d={d} onChange={nd => setDecisions(p => ({ ...p, [s.id]: nd }))} />
                               </div>
-                              <DecisionBadge d={d} onChange={nd => setDecisions(p => ({ ...p, [s.id]: nd }))} />
-                            </div>
-                          );
-                        })}
-                      </div>
+                            );
+                          })}
+                        </div>
+                      </>
                     )}
                   </div>
                 );
