@@ -12,6 +12,7 @@ import archiveRoutes from './routes/archive.js';
 import userRoutes from './routes/users.js';
 import roleRoutes from './routes/roles.js';
 import templateRoutes from './routes/templates.js';
+import subjectRoutes from './routes/subjects.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 3001;
@@ -32,6 +33,7 @@ app.use('/api/archive', archiveRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/roles', roleRoutes);
 app.use('/api/templates', templateRoutes);
+app.use('/api/subjects', subjectRoutes);
 
 // Servir le frontend buildé en production
 if (process.env.NODE_ENV === 'production') {
