@@ -26,8 +26,8 @@ export function BilanCouverture({ student, schoolYear }: BilanCouvertureProps) {
     <div
       style={{
         width: '210mm',
-        minHeight: '297mm',
-        padding: '15mm 20mm 15mm',
+        height: '297mm',
+        padding: '12mm 20mm 12mm',
         fontFamily: 'Arial, sans-serif',
         fontSize: '11pt',
         color: '#000',
@@ -35,6 +35,8 @@ export function BilanCouverture({ student, schoolYear }: BilanCouvertureProps) {
         pageBreakAfter: 'always',
         boxSizing: 'border-box',
         margin: '0 auto',
+        overflow: 'hidden',
+        position: 'relative',
       }}
     >
       {/* ── EN-TÊTE (même style que les certificats) ── */}
