@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Header } from './Header';
 import { Sidebar } from './Sidebar';
+import { Chatbot } from '../chatbot/Chatbot';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -68,6 +69,8 @@ export function Layout({
           </div>
         </main>
       </div>
+
+      <Chatbot />
     </div>
   );
 }
