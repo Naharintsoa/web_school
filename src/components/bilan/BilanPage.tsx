@@ -158,6 +158,10 @@ export function BilanPage() {
           .bilan-print-zone { display: block !important; }
           body, html { margin: 0; padding: 0; background: white; }
           @page { size: A4 portrait; margin: 0; }
+
+          /* Saut de page entre chaque élève, mais pas après le dernier */
+          .bilan-page { page-break-after: always; break-after: page; }
+          .bilan-page:last-child { page-break-after: avoid; break-after: avoid; }
         }
       `}</style>
     </>

@@ -24,6 +24,7 @@ export function BilanCouverture({ student, schoolYear }: BilanCouvertureProps) {
 
   return (
     <div
+      className="bilan-page"
       style={{
         width: '210mm',
         height: '297mm',
@@ -32,7 +33,6 @@ export function BilanCouverture({ student, schoolYear }: BilanCouvertureProps) {
         fontSize: '11pt',
         color: '#000',
         background: '#fff',
-        pageBreakAfter: 'always',
         boxSizing: 'border-box',
         margin: '0 auto',
         overflow: 'hidden',
