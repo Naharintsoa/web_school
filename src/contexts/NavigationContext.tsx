@@ -1,20 +1,15 @@
 /**
- * Contexte de navigation global
- * Permet à n'importe quel composant de naviguer vers une autre page
- * sans avoir à passer des callbacks par les props (prop drilling).
+ * Contexte de navigation global — basé sur React Router v6.
+ * Permet à n'importe quel composant de naviguer via useNavigation().
  */
-import React, { createContext, useContext } from 'react';
+import { createContext, useContext } from 'react';
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 
 interface NavigationContextType {
-  /** Naviguer vers un chemin (ex: '/students', '/grades') */
   navigate: (path: string) => void;
-  /** Naviguer vers la page des notes en présélectionnant une classe */
   navigateToGrades: (grade: string) => void;
-  /** Chemin actif courant */
   activePath: string;
-  /** Classe présélectionnée pour la page des notes (peut être null) */
   preselectedGrade: string | null;
-  /** Efface la classe présélectionnée après utilisation */
   clearPreselectedGrade: () => void;
 }
 
@@ -27,3 +22,33 @@ export const NavigationContext = createContext<NavigationContextType>({
 });
 
 export const useNavigation = () => useContext(NavigationContext);
+
+/** Hook interne utilisé dans App pour construire la valeur du contexte */
+export function useNavigationProvider() {
+  const nav = useNavigate();
+  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const navigate = (path: string) => nav(path);
+
+  const navigateToGrades = (grade: string) => {
+    nav(`/grades?classe=${encodeURIComponent(grade)}`);
+  };
+
+  const preselectedGrade = searchParams.get('classe');
+
+  const clearPreselectedGrade = () => {
+    setSearchParams(prev => {
+      prev.delete('classe');
+      return prev;
+    });
+  };
+
+  return {
+    navigate,
+    navigateToGrades,
+    activePath: location.pathname,
+    preselectedGrade,
+    clearPreselectedGrade,
+  };
+}

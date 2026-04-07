@@ -1,9 +1,20 @@
 /**
- * Composant racine de l'application Collège Sully.
- * Gère la navigation entre les pages via un état simple (pas de React Router).
- * Fournit les contextes de navigation, d'authentification et de permissions.
+ * Composant racine — navigation via React Router v6.
+ *
+ * Routes :
+ *   /              → redirect /students
+ *   /students      → liste des élèves
+ *   /classes       → gestion des classes
+ *   /teachers      → liste des enseignants
+ *   /grades        → notes (param ?classe= pour présélection)
+ *   /import        → importation Excel
+ *   /archive       → élèves archivés
+ *   /settings      → paramètres
+ *   /admin         → administration
+ *   /options/templates → modèles de documents
+ *   /options/purge     → suppression des données
  */
-import React from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './hooks/useAuth';
 import { useAuthContext } from './contexts/AuthContext';
 import { LoginForm } from './components/auth/LoginForm';
@@ -18,23 +29,10 @@ import { ImportPage } from './components/import/ImportPage';
 import { AdminPage } from './components/admin/AdminPage';
 import { TemplatesPage } from './components/options/TemplatesPage';
 import { PurgePage } from './components/options/PurgePage';
-import { NavigationContext } from './contexts/NavigationContext';
+import { NavigationContext, useNavigationProvider } from './contexts/NavigationContext';
 
 function App() {
   const { user, loading, login, logout } = useAuth();
-  const { hasPermission } = useAuthContext();
-
-  const [activePath, setActivePath] = React.useState('/students');
-  const [preselectedGrade, setPreselectedGrade] = React.useState<string | null>(null);
-
-  const navigate = (path: string) => setActivePath(path);
-
-  const navigateToGrades = (grade: string) => {
-    setPreselectedGrade(grade);
-    setActivePath('/grades');
-  };
-
-  const clearPreselectedGrade = () => setPreselectedGrade(null);
 
   if (loading) {
     return (
@@ -51,59 +49,81 @@ function App() {
     return <LoginForm onLogin={login} />;
   }
 
-  const renderContent = () => {
-    switch (activePath) {
-      case '/students':
-        return hasPermission('students:view') ? <StudentList /> : <AccessDenied />;
-      case '/classes':
-        return hasPermission('classes:view') ? <ClassList /> : <AccessDenied />;
-      case '/teachers':
-        return hasPermission('teachers:view') ? <TeacherList /> : <AccessDenied />;
-      case '/grades':
-        return hasPermission('grades:view') ? (
-          <GradesList initialGrade={preselectedGrade} onGradeSelected={clearPreselectedGrade} />
-        ) : <AccessDenied />;
-      case '/import':
-        return hasPermission('import:use') ? <ImportPage /> : <AccessDenied />;
-      case '/archive':
-        return hasPermission('archive:view') ? <ArchivePage /> : <AccessDenied />;
-      case '/settings':
-        return hasPermission('settings:view') ? <Settings /> : <AccessDenied />;
-      case '/admin':
-        return hasPermission('admin:users') || hasPermission('admin:roles')
-          ? <AdminPage />
-          : <AccessDenied />;
-      case '/options/templates':
-        return hasPermission('settings:view') ? <TemplatesPage /> : <AccessDenied />;
-      case '/options/purge':
-        return hasPermission('settings:view') ? <PurgePage /> : <AccessDenied />;
-      default:
-        return <StudentList />;
-    }
-  };
+  return <AppRoutes user={user} onLogout={logout} />;
+}
+
+/** Rendu des routes — séparé pour accéder aux hooks React Router */
+function AppRoutes({ user, onLogout }: { user: { name: string; role: string }; onLogout: () => void }) {
+  const { hasPermission } = useAuthContext();
+  const navValue = useNavigationProvider();
 
   return (
-    <NavigationContext.Provider value={{
-      navigate,
-      navigateToGrades,
-      activePath,
-      preselectedGrade,
-      clearPreselectedGrade,
-    }}>
+    <NavigationContext.Provider value={navValue}>
       <Layout
         userName={user.name}
         userRole={user.role}
-        activePath={activePath}
-        onNavigate={navigate}
-        onLogout={logout}
+        activePath={navValue.activePath}
+        onNavigate={navValue.navigate}
+        onLogout={onLogout}
       >
-        {renderContent()}
+        <Routes>
+          <Route path="/" element={<Navigate to="/students" replace />} />
+
+          <Route path="/students" element={
+            hasPermission('students:view') ? <StudentList /> : <AccessDenied />
+          } />
+
+          <Route path="/classes" element={
+            hasPermission('classes:view') ? <ClassList /> : <AccessDenied />
+          } />
+
+          <Route path="/teachers" element={
+            hasPermission('teachers:view') ? <TeacherList /> : <AccessDenied />
+          } />
+
+          <Route path="/grades" element={
+            hasPermission('grades:view') ? (
+              <GradesList
+                initialGrade={navValue.preselectedGrade}
+                onGradeSelected={navValue.clearPreselectedGrade}
+              />
+            ) : <AccessDenied />
+          } />
+
+          <Route path="/import" element={
+            hasPermission('import:use') ? <ImportPage /> : <AccessDenied />
+          } />
+
+          <Route path="/archive" element={
+            hasPermission('archive:view') ? <ArchivePage /> : <AccessDenied />
+          } />
+
+          <Route path="/settings" element={
+            hasPermission('settings:view') ? <Settings /> : <AccessDenied />
+          } />
+
+          <Route path="/admin" element={
+            hasPermission('admin:users') || hasPermission('admin:roles')
+              ? <AdminPage />
+              : <AccessDenied />
+          } />
+
+          <Route path="/options/templates" element={
+            hasPermission('settings:view') ? <TemplatesPage /> : <AccessDenied />
+          } />
+
+          <Route path="/options/purge" element={
+            hasPermission('settings:view') ? <PurgePage /> : <AccessDenied />
+          } />
+
+          {/* Fallback */}
+          <Route path="*" element={<Navigate to="/students" replace />} />
+        </Routes>
       </Layout>
     </NavigationContext.Provider>
   );
 }
 
-/** Affiché quand l'utilisateur n'a pas accès à une page */
 function AccessDenied() {
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
