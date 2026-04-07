@@ -63,14 +63,14 @@ export function Layout({
           activePath={activePath}
           onMenuClick={() => setSidebarOpen(true)}
         />
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6">
+        <main className={`flex-1 p-4 sm:p-6 ${activePath === '/bilan' ? 'overflow-hidden' : 'overflow-y-auto'}`}>
           <div className="max-w-7xl mx-auto">
             {children}
           </div>
         </main>
       </div>
 
-      <Chatbot />
+      {activePath !== '/bilan' && <Chatbot />}
     </div>
   );
 }
