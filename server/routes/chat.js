@@ -1,8 +1,8 @@
 /**
- * Route chatbot — IA scolaire basée sur Claude
+ * Route chatbot — IA scolaire basée sur Ollama
  * POST /api/chat
  *
- * Claude utilise le "tool use" pour interroger la BDD en langage naturel.
+ * Ollama exécute un modèle LLM local qui interroge la BDD en langage naturel.
  * Outils disponibles :
  *  - chercher_eleves       : recherche par nom / classe / année
  *  - notes_eleve           : notes d'un élève (tous trimestres ou un seul)
@@ -11,79 +11,26 @@
  *  - infos_eleve           : fiche complète (parents, adresse, ISS…)
  */
 import { Router } from 'express';
-import Anthropic from '@anthropic-ai/sdk';
 import { pool } from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
 
 const router = Router();
 router.use(requireAuth);
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434';
+const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'mistral';
 
-// ─── Définitions des outils ───────────────────────────────────────────────────
+// ─── Définition des outils JSON ───────────────────────────────────────────────
 
-const TOOLS = [
-  {
-    name: 'chercher_eleves',
-    description: 'Recherche des élèves par nom, prénom, classe ou année scolaire. Retourne la liste avec infos de base.',
-    input_schema: {
-      type: 'object',
-      properties: {
-        nom: { type: 'string', description: 'Nom ou prénom (partiel accepté)' },
-        classe: { type: 'string', description: 'Classe ex: 6EME, 5EME, 4EME, 3EME, CM1, CM2, CE1, CE2, CP, GS, MS, PS' },
-        annee: { type: 'string', description: 'Année scolaire ex: 2024-2025' },
-        limite: { type: 'number', description: 'Nombre max de résultats (défaut 20)' },
-      },
-    },
-  },
-  {
-    name: 'notes_eleve',
-    description: "Récupère les notes d'un élève pour un trimestre ou pour toute l'année.",
-    input_schema: {
-      type: 'object',
-      properties: {
-        eleve_id: { type: 'string', description: 'ID de l\'élève' },
-        trimestre: { type: 'number', description: 'Trimestre 1, 2 ou 3 (omis = tous)' },
-      },
-      required: ['eleve_id'],
-    },
-  },
-  {
-    name: 'statistiques_classe',
-    description: "Calcule la moyenne générale, le meilleur et le moins bon élève d'une classe pour un trimestre.",
-    input_schema: {
-      type: 'object',
-      properties: {
-        classe: { type: 'string', description: 'Classe ex: 3EME' },
-        trimestre: { type: 'number', description: 'Trimestre 1, 2 ou 3' },
-        annee: { type: 'string', description: 'Année scolaire' },
-      },
-      required: ['classe', 'trimestre'],
-    },
-  },
-  {
-    name: 'compter_eleves',
-    description: "Compte le nombre d'élèves par classe, cycle ou pour toute l'école.",
-    input_schema: {
-      type: 'object',
-      properties: {
-        classe: { type: 'string', description: 'Classe spécifique (optionnel)' },
-        annee: { type: 'string', description: 'Année scolaire (optionnel)' },
-      },
-    },
-  },
-  {
-    name: 'infos_eleve',
-    description: "Retourne la fiche complète d'un élève : coordonnées parents, adresse, numéro ISS, date de naissance.",
-    input_schema: {
-      type: 'object',
-      properties: {
-        eleve_id: { type: 'string', description: 'ID de l\'élève' },
-      },
-      required: ['eleve_id'],
-    },
-  },
-];
+const TOOLS_DEFINITIONS = `
+Outils disponibles (s'il te plaît utilise JSON pour les appels) :
+
+1. chercher_eleves : {"action": "chercher_eleves", "nom": "...", "classe": "...", "annee": "..."}
+2. notes_eleve : {"action": "notes_eleve", "eleve_id": "...", "trimestre": 1}
+3. statistiques_classe : {"action": "statistiques_classe", "classe": "...", "trimestre": 1, "annee": "..."}
+4. compter_eleves : {"action": "compter_eleves", "classe": "...", "annee": "..."}
+5. infos_eleve : {"action": "infos_eleve", "eleve_id": "..."}
+`;
 
 // ─── Exécution des outils ─────────────────────────────────────────────────────
 
@@ -267,7 +214,66 @@ Règles :
 - Ne divulgue jamais d'informations confidentielles à des personnes non autorisées.
 - Quand tu listes des élèves ou des notes, utilise des tableaux ou des listes claires.
 - Les classes disponibles sont : PS, MS, GS (maternelle), CP, CE1, CE2, CM1, CM2 (primaire), 6EME, 5EME, 4EME, 3EME (collège).
-- L'année scolaire courante est indiquée dans chaque message utilisateur.`;
+- L'année scolaire courante est indiquée dans chaque message utilisateur.
+
+${TOOLS_DEFINITIONS}
+
+IMPORTANT: Quand tu dois interroger la base de données, réponds en incluant les appels d'outils au format JSON
+Entre tes appels d'outils dans <tool_call> et </tool_call>, puis attends les résultats et fournis une réponse finale.`;
+
+// ─── Appel Ollama ─────────────────────────────────────────────────────────────
+
+async function callOllama(messages, systemPrompt) {
+  try {
+    const response = await fetch(`${OLLAMA_URL}/api/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: OLLAMA_MODEL,
+        prompt: formatPromptForOllama(messages, systemPrompt),
+        stream: false,
+        temperature: 0.3,
+      }),
+    });
+
+    if (!response.ok) throw new Error(`Ollama error: ${response.statusText}`);
+    const data = await response.json();
+    return data.response || '';
+  } catch (err) {
+    console.error('Ollama error:', err);
+    throw new Error(`Impossible de contacter Ollama sur ${OLLAMA_URL}`);
+  }
+}
+
+function formatPromptForOllama(messages, systemPrompt) {
+  let prompt = `${systemPrompt}\n\n`;
+  for (const msg of messages) {
+    if (msg.role === 'user') {
+      prompt += `Utilisateur: ${msg.content}\n\n`;
+    } else if (msg.role === 'assistant') {
+      prompt += `Assistant: ${msg.content}\n\n`;
+    }
+  }
+  prompt += `Assistant: `;
+  return prompt;
+}
+
+// ─── Extraction d'outils du texte ──────────────────────────────────────────────
+
+function extractToolCalls(text) {
+  const toolCalls = [];
+  const regex = /<tool_call>([\s\S]*?)<\/tool_call>/g;
+  let match;
+  while ((match = regex.exec(text)) !== null) {
+    try {
+      const json = JSON.parse(match[1].trim());
+      toolCalls.push(json);
+    } catch (e) {
+      console.warn('Failed to parse tool call:', match[1]);
+    }
+  }
+  return toolCalls;
+}
 
 // ─── Endpoint POST /api/chat ──────────────────────────────────────────────────
 
@@ -276,50 +282,42 @@ router.post('/', async (req, res) => {
   if (!messages?.length) return res.status(400).json({ error: 'messages requis' });
 
   try {
-    // Injecter l'année scolaire dans le contexte
     const systemWithYear = `${SYSTEM}\nAnnée scolaire active : ${schoolYear || 'inconnue'}.`;
 
-    let currentMessages = messages.map(m => ({ role: m.role, content: m.content }));
+    let currentMessages = [...messages];
     let finalText = '';
 
-    // Boucle agentic : Claude peut enchaîner plusieurs appels d'outils
-    for (let turn = 0; turn < 8; turn++) {
-      const response = await client.messages.create({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 1024,
-        system: systemWithYear,
-        tools: TOOLS,
-        messages: currentMessages,
-      });
+    // Boucle : Ollama génère du texte, on extrait les outils, on exécute, on continue
+    for (let turn = 0; turn < 5; turn++) {
+      const response = await callOllama(currentMessages, systemWithYear);
+      finalText = response;
 
-      if (response.stop_reason === 'end_turn') {
-        finalText = response.content
-          .filter(b => b.type === 'text')
-          .map(b => b.text)
-          .join('');
+      const toolCalls = extractToolCalls(response);
+      if (toolCalls.length === 0) {
+        // Pas d'outils demandés, on a la réponse finale
+        // Nettoyer les balises <tool_call> avant de renvoyer
+        finalText = response.replace(/<tool_call>[\s\S]*?<\/tool_call>/g, '').trim();
         break;
       }
 
-      if (response.stop_reason === 'tool_use') {
-        // Exécuter tous les outils demandés
-        const toolUseBlocks = response.content.filter(b => b.type === 'tool_use');
-        const toolResults = await Promise.all(
-          toolUseBlocks.map(async tu => ({
-            type: 'tool_result',
-            tool_use_id: tu.id,
-            content: JSON.stringify(await executeTool(tu.name, tu.input)),
-          }))
-        );
+      // Exécuter les outils demandés
+      const toolResults = await Promise.all(
+        toolCalls.map(async (tool) => {
+          try {
+            const result = await executeTool(tool.action, tool);
+            return { action: tool.action, result };
+          } catch (err) {
+            return { action: tool.action, error: err.message };
+          }
+        })
+      );
 
-        currentMessages = [
-          ...currentMessages,
-          { role: 'assistant', content: response.content },
-          { role: 'user', content: toolResults },
-        ];
-        continue;
-      }
-
-      break;
+      // Ajouter la réponse et les résultats au contexte
+      currentMessages.push({ role: 'assistant', content: response });
+      currentMessages.push({
+        role: 'user',
+        content: `Résultats des outils :\n${JSON.stringify(toolResults, null, 2)}\n\nMaintenant, utilise ces résultats pour répondre à la question initiale.`,
+      });
     }
 
     res.json({ reply: finalText });

@@ -27,36 +27,37 @@ export function BilanCouverture({ student, schoolYear }: BilanCouvertureProps) {
       style={{
         width: '210mm',
         minHeight: '297mm',
-        padding: '15mm 15mm 10mm',
+        padding: '15mm 20mm 15mm',
         fontFamily: 'Arial, sans-serif',
         fontSize: '11pt',
         color: '#000',
         background: '#fff',
         pageBreakAfter: 'always',
         boxSizing: 'border-box',
+        margin: '0 auto',
       }}
     >
-      {/* ── EN-TÊTE ── */}
-      <div style={{ textAlign: 'center', marginBottom: '8mm' }}>
-        {/* Logo placeholder */}
-        <div style={{
-          width: '20mm', height: '20mm',
-          margin: '0 auto 4mm',
-          border: '2px solid #1a3a6b',
-          borderRadius: '50%',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: '9pt', color: '#1a3a6b', fontWeight: 'bold',
-        }}>
-          LOGO
+      {/* ── EN-TÊTE (même style que les certificats) ── */}
+      <div style={{ display: 'flex', alignItems: 'center', marginBottom: '6mm' }}>
+        {/* Logo */}
+        <div style={{ flexShrink: 0, marginLeft: '5mm', width: '22mm', height: '22mm' }}>
+          <img
+            src="/assets/logo-sully.png"
+            alt="Logo Sully"
+            style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+          />
         </div>
-        <div style={{ fontSize: '13pt', fontWeight: 'bold', color: '#1a3a6b', letterSpacing: '1px' }}>
-          COLLÈGE PRIVÉ SULLY
-        </div>
-        <div style={{ fontSize: '9pt', color: '#555', marginTop: '2mm' }}>
-          Excellence • Discipline • Réussite
-        </div>
-        <div style={{ fontSize: '8pt', color: '#555', marginTop: '1mm' }}>
-          Antananarivo — Madagascar
+        {/* Texte centré */}
+        <div style={{ flex: 1, textAlign: 'center', marginLeft: '4mm' }}>
+          <div style={{ fontSize: '14pt', fontWeight: 'bold', color: '#09438a', textTransform: 'uppercase' }}>
+            COLLEGE PRIVE SULLY
+          </div>
+          <div style={{ fontSize: '8pt', color: '#333', lineHeight: '1.5', marginTop: '2mm' }}>
+            Lot IV A 16 bis Ambodivonkely Ambohimanarina<br />
+            Tél : <strong>020 85 234 94</strong> - <strong>034 16 351 52</strong> | Email : <strong>sully@moov.mg</strong><br />
+            CISCO Antananarivo Ville Code : <strong>101 011 793 ZAP VI</strong><br />
+            AO N° 036/2019 - DRENETP/ANALA/AO du 21/11/19
+          </div>
         </div>
       </div>
 
@@ -177,27 +178,6 @@ export function BilanCouverture({ student, schoolYear }: BilanCouvertureProps) {
         </table>
       </div>
 
-      {/* ── SIGNATURES ── */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        marginTop: '12mm',
-        paddingTop: '4mm',
-        borderTop: '1px solid #ccc',
-      }}>
-        <div style={{ textAlign: 'center', width: '40%' }}>
-          <div style={{ fontWeight: 'bold', fontSize: '9pt', marginBottom: '12mm' }}>
-            Signature des Parents
-          </div>
-          <div style={{ borderBottom: '1px solid #333', marginTop: '8mm' }} />
-        </div>
-        <div style={{ textAlign: 'center', width: '40%' }}>
-          <div style={{ fontWeight: 'bold', fontSize: '9pt', marginBottom: '12mm' }}>
-            Le Chef d'Établissement
-          </div>
-          <div style={{ borderBottom: '1px solid #333', marginTop: '8mm' }} />
-        </div>
-      </div>
     </div>
   );
 }

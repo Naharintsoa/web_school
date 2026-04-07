@@ -159,8 +159,9 @@ export function BilanPage() {
         @media print {
           .no-print { display: none !important; }
           .print-only { display: block !important; }
-          body { margin: 0; padding: 0; background: white; }
-          @page { size: A4; margin: 0; }
+          body { margin: 0; padding: 0; background: white; overflow: hidden; }
+          html { overflow: hidden; }
+          @page { size: A4; margin: 10mm; }
         }
         @media screen {
           .print-only { display: none; }
