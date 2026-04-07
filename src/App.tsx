@@ -29,6 +29,7 @@ import { ImportPage } from './components/import/ImportPage';
 import { AdminPage } from './components/admin/AdminPage';
 import { TemplatesPage } from './components/options/TemplatesPage';
 import { PurgePage } from './components/options/PurgePage';
+import { BilanPage } from './components/bilan/BilanPage';
 import { NavigationContext, useNavigationProvider } from './contexts/NavigationContext';
 
 function App() {
@@ -106,6 +107,10 @@ function AppRoutes({ user, onLogout }: { user: { name: string; role: string }; o
             hasPermission('admin:users') || hasPermission('admin:roles')
               ? <AdminPage />
               : <AccessDenied />
+          } />
+
+          <Route path="/bilan" element={
+            hasPermission('grades:view') ? <BilanPage /> : <AccessDenied />
           } />
 
           <Route path="/options/templates" element={

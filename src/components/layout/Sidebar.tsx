@@ -6,7 +6,7 @@ import React from 'react';
 import {
   Users, GraduationCap, ClipboardList, Settings,
   LogOut, BookOpen, Archive, Upload, KeyRound, Shield,
-  SlidersHorizontal, ChevronDown, ChevronRight, LayoutTemplate, Trash2,
+  SlidersHorizontal, ChevronDown, ChevronRight, LayoutTemplate, Trash2, FileCheck,
 } from 'lucide-react';
 import { FR } from '../../constants/translations';
 import { useAuthContext } from '../../contexts/AuthContext';
@@ -32,6 +32,7 @@ const MENU_ITEMS: MenuItem[] = [
   { icon: GraduationCap, label: 'Classes',       path: '/classes',  permission: 'classes:view' },
   { icon: BookOpen,      label: 'Professeurs',   path: '/teachers', permission: 'teachers:view' },
   { icon: ClipboardList, label: 'Notes',         path: '/grades',   permission: 'grades:view' },
+  { icon: FileCheck,    label: 'Bilan Acquis',  path: '/bilan',    permission: 'grades:view' },
   { icon: Upload,        label: 'Importer',      path: '/import',   permission: 'import:use' },
   { icon: Archive,       label: 'Archives',      path: '/archive',  permission: 'archive:view' },
   { icon: Settings,      label: FR.menu.settings, path: '/settings', permission: 'settings:view' },
