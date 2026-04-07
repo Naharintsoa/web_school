@@ -2,6 +2,7 @@
  * BilanPage — sélecteur de classe (CP→CM2) + liste des élèves + impression.
  */
 import React, { useEffect, useState, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { Printer, Users, ChevronRight } from 'lucide-react';
 import { studentApi } from '../../services/api';
 import { useSchoolYear } from '../../contexts/SchoolYearContext';
@@ -63,22 +64,33 @@ export function BilanPage() {
 
   const selectedStudents = students.filter(s => selectedIds.has(s.id));
 
-  // ── Mode impression : afficher uniquement les bilans ──
+  // ── Mode impression : portal directement dans body, hors Layout ──
   if (printing) {
-    return (
-      <>
+    return createPortal(
+      <div className="bilan-portal">
         {selectedStudents.map(s => (
           <BilanCouverture key={s.id} student={s} schoolYear={currentYear} />
         ))}
         <style>{`
+          .bilan-portal {
+            position: fixed;
+            top: -99999px;
+            left: 0;
+          }
           @media print {
+            body > *:not(.bilan-portal) { display: none !important; }
+            .bilan-portal {
+              position: static !important;
+              display: block !important;
+            }
             body, html { margin: 0; padding: 0; background: white; }
             @page { size: A4 portrait; margin: 0; }
             .bilan-page { page-break-after: always; break-after: page; }
             .bilan-page:last-child { page-break-after: avoid; break-after: avoid; }
           }
         `}</style>
-      </>
+      </div>,
+      document.body
     );
   }
 
