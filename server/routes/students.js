@@ -32,6 +32,7 @@ function rowToStudent(row) {
     parentInfo: row.parent_info ?? {},
     enrollmentDate: row.enrollment_date,
     schoolYear: row.school_year,
+    school: row.school ?? 'sully',
   };
 }
 
@@ -75,16 +76,24 @@ function newFamilyId() {
 
 router.get('/', async (req, res) => {
   try {
-    const { year } = req.query;
-    let query = 'SELECT * FROM students';
+    const { year, school } = req.query;
+    const conditions = [];
     const params = [];
+
     if (year) {
-      // Inclure les élèves de l'année demandée ET ceux sans année (données historiques)
-      query += ' WHERE (school_year = $1 OR school_year IS NULL)';
       params.push(year);
+      conditions.push(`(school_year = $${params.length} OR school_year IS NULL)`);
     }
-    query += ' ORDER BY last_name, first_name';
-    const { rows } = await pool.query(query, params);
+    if (school) {
+      params.push(school);
+      conditions.push(`(school = $${params.length} OR school IS NULL)`);
+    }
+
+    const where = conditions.length ? ` WHERE ${conditions.join(' AND ')}` : '';
+    const { rows } = await pool.query(
+      `SELECT * FROM students${where} ORDER BY last_name, first_name`,
+      params
+    );
     return res.json(rows.map(rowToStudent));
   } catch (err) {
     console.error('Erreur récupération élèves:', err);
@@ -123,8 +132,8 @@ router.post('/', async (req, res) => {
   if (!familyId) familyId = newFamilyId();
   try {
     const { rows } = await pool.query(
-      'INSERT INTO students (id,student_number,matricule,first_name,last_name,common_name,date_of_birth,gender,nationality,birth_city,birth_country,grade,cycle,photo_url,iss_number,exit_date,status,family_id,parent_info,enrollment_date,school_year) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21) RETURNING *',
-      [id, s.studentNumber??null, s.matricule??null, s.firstName, s.lastName, s.commonName??null, s.dateOfBirth??null, s.gender??null, s.nationality??null, s.birthCity??null, s.birthCountry??null, s.grade??null, s.cycle??null, s.photoUrl??null, s.issNumber??null, s.exitDate??null, s.status??'actif', familyId, JSON.stringify(s.parentInfo??{}), s.enrollmentDate??null, s.schoolYear??null]
+      'INSERT INTO students (id,student_number,matricule,first_name,last_name,common_name,date_of_birth,gender,nationality,birth_city,birth_country,grade,cycle,photo_url,iss_number,exit_date,status,family_id,parent_info,enrollment_date,school_year,school) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22) RETURNING *',
+      [id, s.studentNumber??null, s.matricule??null, s.firstName, s.lastName, s.commonName??null, s.dateOfBirth??null, s.gender??null, s.nationality??null, s.birthCity??null, s.birthCountry??null, s.grade??null, s.cycle??null, s.photoUrl??null, s.issNumber??null, s.exitDate??null, s.status??'actif', familyId, JSON.stringify(s.parentInfo??{}), s.enrollmentDate??null, s.schoolYear??null, s.school??'sully']
     );
     return res.status(201).json(rowToStudent(rows[0]));
   } catch (err) {
@@ -143,8 +152,8 @@ router.put('/:id', async (req, res) => {
   }
   try {
     const { rows } = await pool.query(
-      'UPDATE students SET student_number=$1,matricule=$2,first_name=$3,last_name=$4,common_name=$5,date_of_birth=$6,gender=$7,nationality=$8,birth_city=$9,birth_country=$10,grade=$11,cycle=$12,photo_url=$13,iss_number=$14,exit_date=$15,status=$16,family_id=$17,parent_info=$18,enrollment_date=$19,school_year=$20 WHERE id=$21 RETURNING *',
-      [s.studentNumber??null, s.matricule??null, s.firstName, s.lastName, s.commonName??null, s.dateOfBirth??null, s.gender??null, s.nationality??null, s.birthCity??null, s.birthCountry??null, s.grade??null, s.cycle??null, s.photoUrl??null, s.issNumber??null, s.exitDate??null, s.status??'actif', familyId, JSON.stringify(s.parentInfo??{}), s.enrollmentDate??null, s.schoolYear??null, id]
+      'UPDATE students SET student_number=$1,matricule=$2,first_name=$3,last_name=$4,common_name=$5,date_of_birth=$6,gender=$7,nationality=$8,birth_city=$9,birth_country=$10,grade=$11,cycle=$12,photo_url=$13,iss_number=$14,exit_date=$15,status=$16,family_id=$17,parent_info=$18,enrollment_date=$19,school_year=$20,school=$21 WHERE id=$22 RETURNING *',
+      [s.studentNumber??null, s.matricule??null, s.firstName, s.lastName, s.commonName??null, s.dateOfBirth??null, s.gender??null, s.nationality??null, s.birthCity??null, s.birthCountry??null, s.grade??null, s.cycle??null, s.photoUrl??null, s.issNumber??null, s.exitDate??null, s.status??'actif', familyId, JSON.stringify(s.parentInfo??{}), s.enrollmentDate??null, s.schoolYear??null, s.school??'sully', id]
     );
     if (rows.length === 0) return res.status(404).json({ message: 'Élève introuvable.' });
     return res.json(rowToStudent(rows[0]));

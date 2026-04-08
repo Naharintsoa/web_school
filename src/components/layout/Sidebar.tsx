@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { FR } from '../../constants/translations';
 import { useAuthContext } from '../../contexts/AuthContext';
+import { useSchool, SCHOOLS } from '../../contexts/SchoolContext';
 import type { Permission } from '../../types/auth';
 
 interface SidebarProps {
@@ -40,6 +41,7 @@ const MENU_ITEMS: MenuItem[] = [
 
 export function Sidebar({ onNavigate, activePath, onLogout }: SidebarProps) {
   const { hasPermission, hasAnyPermission, session } = useAuthContext();
+  const { currentSchool, setCurrentSchool } = useSchool();
   const [optionsOpen, setOptionsOpen] = React.useState(
     activePath.startsWith('/options')
   );
@@ -51,16 +53,42 @@ export function Sidebar({ onNavigate, activePath, onLogout }: SidebarProps) {
 
   return (
     <div className="h-screen w-64 bg-indigo-900 text-white flex flex-col">
-      {/* Logo / Titre */}
-      <div className="px-6 py-6 border-b border-indigo-800">
+      {/* Logo / Titre + switcher établissement */}
+      <div className="px-4 py-4 border-b border-indigo-800 space-y-3">
         <div className="flex items-center space-x-3">
-          <div className="w-9 h-9 bg-indigo-600 rounded-lg flex items-center justify-center font-bold text-lg">
+          <div className={`w-9 h-9 rounded-lg flex items-center justify-center font-bold text-lg flex-shrink-0 ${
+            currentSchool === 'sully-annexe' ? 'bg-violet-600' : 'bg-indigo-600'
+          }`}>
             S
           </div>
           <div>
-            <h1 className="text-base font-bold leading-tight">Collège Sully</h1>
+            <h1 className="text-sm font-bold leading-tight">{SCHOOLS[currentSchool].name}</h1>
             <p className="text-xs text-indigo-400">Gestion scolaire</p>
           </div>
+        </div>
+
+        {/* Switcher Sully ↔ Annexe */}
+        <div className="flex rounded-lg overflow-hidden border border-indigo-700 text-xs font-medium">
+          <button
+            onClick={() => setCurrentSchool('sully')}
+            className={`flex-1 py-1.5 transition-colors ${
+              currentSchool === 'sully'
+                ? 'bg-indigo-600 text-white'
+                : 'text-indigo-300 hover:bg-indigo-800'
+            }`}
+          >
+            Sully
+          </button>
+          <button
+            onClick={() => setCurrentSchool('sully-annexe')}
+            className={`flex-1 py-1.5 transition-colors border-l border-indigo-700 ${
+              currentSchool === 'sully-annexe'
+                ? 'bg-violet-600 text-white'
+                : 'text-indigo-300 hover:bg-indigo-800'
+            }`}
+          >
+            Annexe
+          </button>
         </div>
       </div>
 

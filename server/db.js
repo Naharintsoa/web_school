@@ -109,6 +109,9 @@ export async function initDB() {
     await client.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS birth_country TEXT`);
     await client.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS exit_date TEXT`);
     await client.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'actif'`);
+    await client.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS school TEXT DEFAULT 'sully'`);
+    // Rétro-compatibilité : s'assurer que les élèves existants ont bien school = 'sully'
+    await client.query(`UPDATE students SET school = 'sully' WHERE school IS NULL`);
 
     // 2. Insérer les rôles par défaut si la table est vide
     const { rows: existingRoles } = await client.query('SELECT id FROM roles LIMIT 1');

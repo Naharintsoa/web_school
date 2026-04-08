@@ -4,16 +4,18 @@
  */
 import React, { useState, useRef, useEffect } from 'react';
 import { Users, ChevronDown, BookOpen, Printer } from 'lucide-react';
-import type { Grade, Student } from '../../types';
+import type { Student } from '../../types';
+import type { ClassLevel } from '../../types/student';
 import { ClassStudentsList } from './ClassStudentsList';
 import { ClassDocumentsHub } from './documents/ClassDocumentsHub';
 import { studentApi } from '../../services/api';
 import { useNavigation } from '../../contexts/NavigationContext';
 import { useSchoolYear } from '../../contexts/SchoolYearContext';
+import { useSchool } from '../../contexts/SchoolContext';
 import { FR } from '../../constants/translations';
 
 interface ClassCardProps {
-  grade: Grade;
+  grade: ClassLevel;
   totalStudents: number;
   teachers: string[] | string;
   isSelected?: boolean;
@@ -23,6 +25,7 @@ interface ClassCardProps {
 export function ClassCard({ grade, totalStudents, teachers, isSelected, onSelect }: ClassCardProps) {
   const { navigateToGrades } = useNavigation();
   const { currentYear } = useSchoolYear();
+  const { currentSchool } = useSchool();
   const [isOpen, setIsOpen] = useState(false);
   const [showStudents, setShowStudents] = useState(false);
   const [showDocumentsHub, setShowDocumentsHub] = useState(false);
@@ -41,7 +44,7 @@ export function ClassCard({ grade, totalStudents, teachers, isSelected, onSelect
   }, [isOpen]);
 
   const loadStudents = async () => {
-    const all = await studentApi.getAll(currentYear);
+    const all = await studentApi.getAll(currentYear, currentSchool);
     setStudents(all.filter(s => s.grade === grade));
   };
 
@@ -64,15 +67,20 @@ export function ClassCard({ grade, totalStudents, teachers, isSelected, onSelect
     setIsOpen(false);
   };
 
-  const isCollege = ['6EME', '5EME', '4EME', '3EME'].includes(grade);
+  const isCollege = /^(6EME|5EME|4EME|3EME)(-[AB])?$/.test(grade);
+  const isAnnexe = currentSchool === 'sully-annexe';
 
   return (
     <>
       <div
         className={`bg-white rounded-lg border-2 transition-all cursor-pointer hover:shadow-lg ${
           isSelected
-            ? 'border-indigo-600 shadow-md ring-2 ring-indigo-100'
-            : 'border-gray-200 hover:border-indigo-300'
+            ? isAnnexe
+              ? 'border-violet-600 shadow-md ring-2 ring-violet-100'
+              : 'border-indigo-600 shadow-md ring-2 ring-indigo-100'
+            : isAnnexe
+              ? 'border-gray-200 hover:border-violet-300'
+              : 'border-gray-200 hover:border-indigo-300'
         }`}
         onClick={onSelect}
       >
@@ -134,7 +142,9 @@ export function ClassCard({ grade, totalStudents, teachers, isSelected, onSelect
           <div className="space-y-3">
             <div className="flex items-center space-x-2">
               <div className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
-                totalStudents > 0 ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-500'
+                totalStudents > 0
+                  ? isAnnexe ? 'bg-violet-100 text-violet-700' : 'bg-indigo-100 text-indigo-700'
+                  : 'bg-gray-100 text-gray-500'
               }`}>
                 <Users size={13} />
                 <span>{totalStudents} élève{totalStudents !== 1 ? 's' : ''}</span>

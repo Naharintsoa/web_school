@@ -1,9 +1,12 @@
 import type { Student } from '../../../types';
+import type { SchoolId } from '../../../types/student';
 import { useSchoolYear } from '../../../contexts/SchoolYearContext';
 
+// ─── En-têtes selon l'établissement ──────────────────────────────────────────
 
-// Composant pour l'entête
-function CertificateHeader() {
+function CertificateHeader({ school }: { school: SchoolId }) {
+  const isAnnexe = school === 'sully-annexe';
+
   return (
     <div className="flex items-center mb-2">
       {/* Logo */}
@@ -19,7 +22,7 @@ function CertificateHeader() {
       <div className="ml-2 text-center flex-grow">
         <p className="text-[10px] italic text-gray-700 leading-tight">L'issue vers la réussite</p>
         <h1 className="text-[16px] font-bold text-[#2097bf] uppercase leading-tight">
-          COLLEGE PRIVE SULLY
+          {isAnnexe ? 'SULLY ANNEXE' : 'COLLEGE PRIVE SULLY'}
         </h1>
         <p className="text-[10px] italic text-gray-700 leading-tight mb-1">Savoir être-Savoir · Savoir faire</p>
         <p className="text-[9px] leading-[1.35] text-gray-800">
@@ -43,6 +46,7 @@ interface CertificateTemplateProps {
 export function CertificateTemplate({ type, student }: CertificateTemplateProps) {
   const { currentYear } = useSchoolYear();
   const today = new Date().toLocaleDateString('fr-FR');
+  const school: SchoolId = student.school ?? 'sully';
 
   return (
     <div className="certificate-container">
@@ -50,17 +54,18 @@ export function CertificateTemplate({ type, student }: CertificateTemplateProps)
         <div className="subpage">
           {/* En-tête */}
           <div className="content">
-            <CertificateHeader />
+            <CertificateHeader school={school} />
 
             {/* Titre */}
             <p className="text-center font-bold text-xs text-[#2097bf] mt-2 head2">
-              {type === 'radiation' ? 'CERTIFICAT DE RADIATION' : 'CERTIFICAT DE SCOLARITE'} {currentYear}
+              {type === 'radiation' ? 'CERTIFICAT DE RADIATION' : 'CERTIFICAT DE SCOLARITE'} — {school === 'sully-annexe' ? 'SULLY ANNEXE' : 'COLLEGE PRIVE SULLY'} — {currentYear}
             </p>
 
             {/* Introduction (Directrice) */}
             <div className="intro mt-4 ml-[50px]">
               <p className="font-serif text-[12px] font-tahoma">
-                Je soussignée, <strong>RAMANANIRAINY Norotahiana</strong>, Directrice nominale de l'école SULLY, certifie sur l'honneur<br />que l'élève :
+                Je soussignée, <strong>RAMANANIRAINY Norotahiana</strong>, Directrice nominale de{' '}
+                {school === 'sully-annexe' ? 'SULLY ANNEXE' : 'COLLEGE PRIVE SULLY'}, certifie sur l'honneur<br />que l'élève :
               </p>
             </div>
 

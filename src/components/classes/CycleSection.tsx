@@ -1,5 +1,6 @@
 import React from 'react';
-import type { Cycle, Grade, Student } from '../../types/student';
+import type { Cycle, Student } from '../../types/student';
+import type { ClassLevel } from '../../types/student';
 import { CYCLES } from '../../utils/cycles';
 import { mockTeachers } from '../../data/mockTeachers';
 import { ClassCard } from './ClassCard';
@@ -7,14 +8,24 @@ import { ClassCard } from './ClassCard';
 interface CycleSectionProps {
   cycle: Cycle;
   students: Student[];
-  selectedGrade?: Grade | null;
-  onGradeSelect: (grade: Grade) => void;
+  /** Liste explicite des niveaux à afficher (Sully ou Annexe) */
+  gradesList: ClassLevel[];
+  selectedGrade?: ClassLevel | null;
+  onGradeSelect: (grade: ClassLevel) => void;
 }
 
-export function CycleSection({ cycle, students, selectedGrade, onGradeSelect }: CycleSectionProps) {
+export function CycleSection({ cycle, students, gradesList, selectedGrade, onGradeSelect }: CycleSectionProps) {
   const cycleInfo = CYCLES[cycle];
-  const getStudentCountByGrade = (grade: Grade) => {
-    return students.filter(student => student.grade === grade).length;
+
+  const getStudentCountByGrade = (grade: ClassLevel) =>
+    students.filter(s => s.grade === grade).length;
+
+  // Pour les classes Annexe (ex: 'PS-A'), chercher le teacher du niveau de base ('PS')
+  const getTeachers = (grade: ClassLevel): string | string[] => {
+    const key = grade as keyof typeof mockTeachers;
+    if (mockTeachers[key]) return mockTeachers[key];
+    const base = grade.replace(/-[AB]$/, '') as keyof typeof mockTeachers;
+    return mockTeachers[base] ?? [];
   };
 
   return (
@@ -24,12 +35,12 @@ export function CycleSection({ cycle, students, selectedGrade, onGradeSelect }: 
       </div>
       <div className="p-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {cycleInfo.grades.map((grade) => (
+          {gradesList.map((grade) => (
             <ClassCard
               key={grade}
               grade={grade}
               totalStudents={getStudentCountByGrade(grade)}
-              teachers={mockTeachers[grade]}
+              teachers={getTeachers(grade)}
               isSelected={selectedGrade === grade}
               onSelect={() => onGradeSelect(grade)}
             />

@@ -2,9 +2,12 @@ import { apiFetch } from './client';
 import type { Student } from '../../types';
 
 export const studentApi = {
-  getAll: async (year?: string): Promise<Student[]> => {
-    const url = year ? `/students?year=${encodeURIComponent(year)}` : '/students';
-    return apiFetch<Student[]>(url);
+  getAll: async (year?: string, school?: string): Promise<Student[]> => {
+    const params = new URLSearchParams();
+    if (year)   params.set('year',   year);
+    if (school) params.set('school', school);
+    const qs = params.toString();
+    return apiFetch<Student[]>(qs ? `/students?${qs}` : '/students');
   },
 
   getById: async (id: string): Promise<Student> => {

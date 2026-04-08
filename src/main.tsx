@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom';
 import App from './App.tsx';
 import { AuthProvider } from './contexts/AuthContext';
 import { SchoolYearProvider } from './contexts/SchoolYearContext';
+import { SchoolProvider } from './contexts/SchoolContext';
 import { ToastProvider } from './contexts/ToastContext';
 import './index.css';
 
@@ -12,9 +13,11 @@ createRoot(document.getElementById('root')!).render(
     <BrowserRouter>
       <AuthProvider>
         <SchoolYearProvider>
-          <ToastProvider>
-            <App />
-          </ToastProvider>
+          <SchoolProvider>
+            <ToastProvider>
+              <App />
+            </ToastProvider>
+          </SchoolProvider>
         </SchoolYearProvider>
       </AuthProvider>
     </BrowserRouter>
