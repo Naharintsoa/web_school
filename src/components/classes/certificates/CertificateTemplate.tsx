@@ -60,7 +60,7 @@ export function CertificateTemplate({ type, student }: CertificateTemplateProps)
             {/* Introduction (Directrice) */}
             <div className="intro mt-4 ml-[50px]">
               <p className="font-serif text-[12px] font-tahoma">
-                Je soussignée, <strong>RAMANANIRAINY Norotahiana</strong>, Directrice nominale de l'école SULLY, certifie sur l'honneur que l'élève :
+                Je soussignée, <strong>RAMANANIRAINY Norotahiana</strong>, Directrice nominale de l'école SULLY, certifie sur l'honneur<br />que l'élève :
               </p>
             </div>
 
