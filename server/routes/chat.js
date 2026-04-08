@@ -17,8 +17,9 @@ import { requireAuth } from '../middleware/auth.js';
 const router = Router();
 router.use(requireAuth);
 
-const OLLAMA_URL   = process.env.OLLAMA_URL          || 'http://localhost:11434';
-const OLLAMA_MODEL = process.env.OLLAMA_MODEL         || 'mistral';
+const OLLAMA_URL     = process.env.OLLAMA_URL     || 'http://localhost:11434';
+const OLLAMA_MODEL   = process.env.OLLAMA_MODEL   || 'mistral';
+const OLLAMA_API_KEY = process.env.OLLAMA_API_KEY || '';
 const OLLAMA_TIMEOUT_MS  = parseInt(process.env.OLLAMA_TIMEOUT_MS  || '60000', 10); // 60 s par tentative
 const OLLAMA_MAX_RETRIES = parseInt(process.env.OLLAMA_MAX_RETRIES || '3',     10); // 3 tentatives max
 
@@ -230,9 +231,12 @@ Entre tes appels d'outils dans <tool_call> et </tool_call>, puis attends les ré
 // ─── Appel Ollama (une seule tentative) ──────────────────────────────────────
 
 async function callOllamaOnce(messages, systemPrompt, signal) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (OLLAMA_API_KEY) headers['Authorization'] = `Bearer ${OLLAMA_API_KEY}`;
+
   const response = await fetch(`${OLLAMA_URL}/api/chat`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     signal,
     body: JSON.stringify({
       model: OLLAMA_MODEL,
