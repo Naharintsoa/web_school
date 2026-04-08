@@ -17,7 +17,7 @@ function CertificateHeader() {
 
       {/* Texte à droite */}
       <div className="ml-2 text-center flex-grow">
-        <h1 className="text-[20px] font-bold text-[#09438a] uppercase">
+        <h1 className="text-[20px] font-bold text-[#2097bf] uppercase">
           COLLEGE PRIVE SULLY
         </h1>
 
@@ -52,7 +52,7 @@ export function CertificateTemplate({ type, student }: CertificateTemplateProps)
             <CertificateHeader />
 
             {/* Titre */}
-            <p className="text-center font-bold text-xs text-[#09438a] mt-2 head2">
+            <p className="text-center font-bold text-xs text-[#2097bf] mt-2 head2">
               {type === 'radiation' ? 'CERTIFICAT DE RADIATION' : 'CERTIFICAT DE SCOLARITE'} {currentYear}
             </p>
 
@@ -66,26 +66,23 @@ export function CertificateTemplate({ type, student }: CertificateTemplateProps)
             {/* Corps du certificat */}
             <div className="content mt-4 ml-[50px]">
               <ul className="list-disc pl-6 text-[12px] font-tahoma">
-                <li><strong>Nom :</strong> {student.lastName}</li>
-                <li><strong>Prénoms :</strong> {student.firstName}</li>
-                <li><strong>Né(e) le :</strong> {new Date(student.dateOfBirth).toLocaleDateString('fr-FR')}</li>
-                <li><strong>A :</strong> Antananarivo</li>
-                <li><strong>Fille de :</strong> {student.parentInfo.fatherName}</li>
-                <li><strong>Et de :</strong> {student.parentInfo.motherName}</li>
+                <li><strong>Nom :</strong> <span className="val">{student.lastName}</span></li>
+                <li><strong>Prénoms :</strong> <span className="val">{student.firstName}</span></li>
+                <li><strong>Né(e) le :</strong> <span className="val">{new Date(student.dateOfBirth).toLocaleDateString('fr-FR')}</span></li>
+                <li><strong>À :</strong> <span className="val">{student.birthCity || 'Antananarivo'}</span></li>
+                <li><strong>Fils ou Fille de :</strong> <span className="val">{student.parentInfo.fatherName}</span></li>
+                <li><strong>Et de :</strong> <span className="val">{student.parentInfo.motherName}</span></li>
               </ul>
 
               {/* Lignes sans balise <li> */}
               <p className="text-[12px] font-tahoma">
-                <strong>Est élève dans mon établissement</strong>
+                <strong>Est élève depuis le :</strong> <span className="val">{new Date(student.enrollmentDate).toLocaleDateString('fr-FR')}</span>
               </p>
               <p className="text-[12px] font-tahoma">
-                <strong>Depuis le :</strong> {new Date(student.enrollmentDate).toLocaleDateString('fr-FR')}
+                <strong>Classe actuelle :</strong> <span className="val">{student.grade}</span>
               </p>
               <p className="text-[12px] font-tahoma">
-                <strong>Classe actuelle :</strong> {student.grade}
-              </p>
-              <p className="text-[12px] font-tahoma">
-                <strong>Numéro matricule :</strong> {student.matricule}
+                <strong>Matricule :</strong> <span className="val">{student.matricule}</span>
               </p>
 
               <p className="text-center mt-4 text-[12px] font-serif font-tahoma">
@@ -119,12 +116,13 @@ export function CertificateTemplate({ type, student }: CertificateTemplateProps)
 
             .page {
               page-break-before: always;
-              width: 20cm;  /* Largeur 20 cm */
-              height: 14cm; /* Hauteur 14 cm */
-              margin-top: 25px;  /* Espace de 25px en haut */
-              padding: 0;
+              width: 20cm;
+              height: 14cm;
+              margin-top: 25px;
+              padding: 4px;
               box-sizing: border-box;
-              border: 5px solid #09438a;
+              border: 3px double #2097bf;
+              outline: 1px solid #2097bf;
               border-radius: 10px;
               background: #ffffff;
             }
@@ -154,12 +152,13 @@ export function CertificateTemplate({ type, student }: CertificateTemplateProps)
           }
 
           .page {
-            width: 20cm; /* Largeur 20 cm */
-            height: 12cm; /* Hauteur 14 cm */
-            border: 5px solid #09438a;
+            width: 20cm;
+            height: 12cm;
+            border: 3px double #2097bf;
+            outline: 1px solid #2097bf;
             border-radius: 10px;
             background: #ffffff;
-            padding: 0;
+            padding: 4px;
             box-sizing: border-box;
             margin: 0;
           }
@@ -173,7 +172,7 @@ export function CertificateTemplate({ type, student }: CertificateTemplateProps)
           .head2 h1 {
             font-size: 12px;
             font-family: "Times New Roman", serif;
-            color: #09438a;
+            color: #2097bf;
           }
 
           .date {
@@ -198,12 +197,13 @@ export function CertificateTemplate({ type, student }: CertificateTemplateProps)
           }
 
           strong {
-            color: #09438a;
+            color: #2097bf;
           }
 
-          /* Appliquer la couleur bleue à toutes les données (nom, prénoms, etc.) */
-          .content ul li strong {
-            color: #09438a;
+          /* Valeurs des données élève en #2097bf */
+          .val {
+            color: #2097bf;
+            font-weight: bold;
           }
         `}
       </style>
