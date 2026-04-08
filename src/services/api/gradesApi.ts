@@ -5,9 +5,16 @@ import { apiFetch } from './client';
 import type { Grade } from '../../types';
 
 export const gradesApi = {
-  /** Récupère toutes les notes */
+  /** Récupère toutes les notes (sans filtre — usage limité) */
   getAll: async (): Promise<Grade[]> => {
     return apiFetch<Grade[]>('/grades');
+  },
+
+  /** Récupère les notes d'une classe pour une année/école — filtré côté serveur */
+  getByClass: async (grade: string, year: string, school?: string): Promise<Grade[]> => {
+    const params = new URLSearchParams({ grade, year });
+    if (school) params.set('school', school);
+    return apiFetch<Grade[]>(`/grades?${params.toString()}`);
   },
 
   /** Récupère toutes les notes d'un élève */

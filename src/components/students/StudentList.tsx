@@ -2,7 +2,7 @@
  * Liste principale des élèves avec recherche, ajout, édition et suppression.
  * La suppression archive d'abord l'élève avant de le retirer de la liste active.
  */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Search, Plus, Edit2, Trash2, Hash, Archive, Loader2 } from 'lucide-react';
 import type { Student, Grade } from '../../types';
 import type { ArchivedStudent } from '../../types/archive';
@@ -58,11 +58,14 @@ export function StudentList() {
     }
   };
 
-  const filteredStudents = students.filter(student =>
-    student.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    student.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (student.matricule && student.matricule.includes(searchTerm))
-  );
+  const filteredStudents = useMemo(() => {
+    const term = searchTerm.toLowerCase();
+    return students.filter(s =>
+      s.firstName.toLowerCase().includes(term) ||
+      s.lastName.toLowerCase().includes(term) ||
+      (s.matricule && s.matricule.includes(searchTerm))
+    );
+  }, [students, searchTerm]);
 
   const handleAddStudent = () => setShowClassSelection(true);
 
@@ -123,9 +126,9 @@ export function StudentList() {
     }
   };
 
-  const handleCloseDetails = () => {
+  const handleCloseDetails = (wasEdited = false) => {
     setSelectedStudent(null);
-    loadStudents();
+    if (wasEdited) loadStudents();
   };
 
   // Affichage du formulaire d'ajout (pleine page)

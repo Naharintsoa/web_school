@@ -30,9 +30,24 @@ function rowToGrade(row) {
   };
 }
 
-// ─── GET /api/grades ──────────────────────────────────────────────────────────
-router.get('/', async (_req, res) => {
+// ─── GET /api/grades?grade=CP&year=2024-2025&school=sully ────────────────────
+// Filtrage par classe/année/école pour éviter le full table scan
+router.get('/', async (req, res) => {
+  const { grade, year, school } = req.query;
   try {
+    if (grade && year) {
+      const schoolFilter = school ? 'AND s.school = $3' : '';
+      const params = school ? [grade, year, school] : [grade, year];
+      const { rows } = await pool.query(
+        `SELECT g.* FROM grades g
+         JOIN students s ON s.id = g.student_id
+         WHERE s.grade = $1 AND s.school_year = $2 ${schoolFilter}
+         ORDER BY g.student_id, g.term, g.subject_name`,
+        params
+      );
+      return res.json(rows.map(rowToGrade));
+    }
+    // Fallback sans filtre (rétro-compat)
     const { rows } = await pool.query(
       'SELECT * FROM grades ORDER BY student_id, term, subject_name'
     );
