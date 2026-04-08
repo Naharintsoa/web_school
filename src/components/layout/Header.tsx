@@ -1,11 +1,14 @@
 /**
  * Barre d'en-tête de l'application.
- * Affiche le titre de la page courante et les informations utilisateur.
+ * Affiche le titre de la page, le profil utilisateur,
+ * et la cloche de notification (superadmin uniquement).
  */
 import React from 'react';
-import { User, Menu } from 'lucide-react';
+import { Menu } from 'lucide-react';
+import { useAuthContext } from '../../contexts/AuthContext';
+import { useLoginNotifications } from '../../hooks/useLoginNotifications';
+import { NotificationBell } from './NotificationBell';
 
-// Mapping chemin → titre affiché dans l'en-tête
 const PAGE_TITLES: Record<string, string> = {
   '/students': 'Gestion des élèves',
   '/classes':  'Gestion des classes',
@@ -15,7 +18,6 @@ const PAGE_TITLES: Record<string, string> = {
   '/settings': 'Paramètres',
 };
 
-// Labels des rôles en français
 const ROLE_LABELS: Record<string, string> = {
   admin:   'Administrateur',
   teacher: 'Professeur',
@@ -30,6 +32,12 @@ interface HeaderProps {
 }
 
 export function Header({ userName, role, activePath, onMenuClick }: HeaderProps) {
+  const { session } = useAuthContext();
+  const isSuperAdmin = session?.isSuperAdmin ?? false;
+
+  const { notifications, unreadCount, markAllRead, clearAll } =
+    useLoginNotifications(isSuperAdmin);
+
   const pageTitle = PAGE_TITLES[activePath] ?? 'Collège Sully';
   const roleLabel = ROLE_LABELS[role] ?? role;
 
@@ -48,8 +56,17 @@ export function Header({ userName, role, activePath, onMenuClick }: HeaderProps)
           <h2 className="text-lg font-semibold text-gray-800">{pageTitle}</h2>
         </div>
 
-        {/* Droite : profil utilisateur */}
-        <div className="flex items-center space-x-3">
+        {/* Droite : cloche (superadmin) + profil */}
+        <div className="flex items-center space-x-2">
+          {isSuperAdmin && (
+            <NotificationBell
+              notifications={notifications}
+              unreadCount={unreadCount}
+              onMarkAllRead={markAllRead}
+              onClearAll={clearAll}
+            />
+          )}
+
           <div className="flex items-center space-x-2.5">
             <div className="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center text-white text-sm font-semibold">
               {userName.charAt(0).toUpperCase()}

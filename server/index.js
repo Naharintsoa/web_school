@@ -14,6 +14,7 @@ import roleRoutes from './routes/roles.js';
 import templateRoutes from './routes/templates.js';
 import subjectRoutes from './routes/subjects.js';
 import chatRoutes from './routes/chat.js';
+import notificationRoutes from './routes/notifications.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 3001;
@@ -36,6 +37,7 @@ app.use('/api/roles', roleRoutes);
 app.use('/api/templates', templateRoutes);
 app.use('/api/subjects', subjectRoutes);
 app.use('/api/chat', chatRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Servir le frontend buildé en production
 if (process.env.NODE_ENV === 'production') {

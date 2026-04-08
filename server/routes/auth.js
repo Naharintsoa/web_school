@@ -10,6 +10,7 @@ import jwt from 'jsonwebtoken';
 import { pool } from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
 import { sendLoginNotification } from '../services/mailer.js';
+import { broadcastLoginEvent } from './notifications.js';
 
 const router = Router();
 
@@ -71,16 +72,23 @@ router.post('/login', async (req, res) => {
       // Pas de maxAge → session cookie (expire à la fermeture du navigateur)
     });
 
-    // Notification e-mail (non-bloquante — fire & forget)
     const clientIp = req.headers['x-forwarded-for']?.split(',')[0]?.trim()
       || req.socket?.remoteAddress
       || 'inconnue';
-    sendLoginNotification({
-      fullName: user.full_name,
-      username: user.username,
+
+    const loginInfo = {
+      fullName:  user.full_name,
+      username:  user.username,
       roleLabel: user.role_label,
-      ip: clientIp,
-    });
+      ip:        clientIp,
+      loginAt:   new Date().toISOString(),
+    };
+
+    // Notification e-mail (non-bloquante)
+    sendLoginNotification(loginInfo);
+
+    // Notification temps réel pour le superadmin (SSE)
+    broadcastLoginEvent(loginInfo);
 
     return res.json(session);
   } catch (err) {
