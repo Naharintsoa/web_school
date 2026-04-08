@@ -197,7 +197,7 @@ export function CertificateTemplate({ type, student }: CertificateTemplateProps)
           }
 
           strong {
-            color: #2097bf;
+            color: #000;
           }
 
           /* Valeurs des données élève en #2097bf */
