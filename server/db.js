@@ -113,6 +113,23 @@ export async function initDB() {
     // Rétro-compatibilité : s'assurer que les élèves existants ont bien school = 'sully'
     await client.query(`UPDATE students SET school = 'sully' WHERE school IS NULL`);
 
+    // Supprimer les doublons existants avant de créer l'index unique
+    // Garde la ligne avec l'id le plus récent pour chaque (nom normalisé, école)
+    await client.query(`
+      DELETE FROM subjects
+      WHERE id IN (
+        SELECT id FROM (
+          SELECT id,
+            ROW_NUMBER() OVER (
+              PARTITION BY UPPER(TRIM(name)), school
+              ORDER BY created_at DESC NULLS LAST, id DESC
+            ) AS rn
+          FROM subjects
+        ) ranked
+        WHERE rn > 1
+      )
+    `);
+
     // Contrainte unicité matières : (nom normalisé, école) — idempotent
     await client.query(`
       CREATE UNIQUE INDEX IF NOT EXISTS idx_subjects_unique_name_school
