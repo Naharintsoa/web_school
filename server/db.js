@@ -122,7 +122,7 @@ export async function initDB() {
           SELECT id,
             ROW_NUMBER() OVER (
               PARTITION BY UPPER(TRIM(name)), school
-              ORDER BY created_at DESC NULLS LAST, id DESC
+              ORDER BY id DESC
             ) AS rn
           FROM subjects
         ) ranked
