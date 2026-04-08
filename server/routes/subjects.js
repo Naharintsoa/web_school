@@ -39,15 +39,32 @@ router.get('/', async (req, res) => {
 // POST /api/subjects
 router.post('/', async (req, res) => {
   const { name, coefficient, teacherName, school } = req.body;
+  if (!name?.trim()) return res.status(400).json({ message: 'Le nom de la matière est requis.' });
+
+  const normalizedName = name.trim().toUpperCase();
+  const targetSchool = school ?? 'sully';
   const id = `subj-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+
   try {
+    // Vérification doublon (insensible à la casse)
+    const { rows: existing } = await pool.query(
+      `SELECT id FROM subjects WHERE UPPER(TRIM(name)) = $1 AND school = $2`,
+      [normalizedName, targetSchool]
+    );
+    if (existing.length > 0) {
+      return res.status(409).json({ message: `La matière "${normalizedName}" existe déjà dans cet établissement.` });
+    }
+
     const { rows } = await pool.query(
       `INSERT INTO subjects (id, name, coefficient, teacher_name, school)
        VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-      [id, name, coefficient ?? 1, teacherName ?? null, school ?? 'sully']
+      [id, normalizedName, coefficient ?? 1, teacherName?.trim() || null, targetSchool]
     );
     return res.status(201).json(rowToSubject(rows[0]));
   } catch (err) {
+    if (err.code === '23505') {
+      return res.status(409).json({ message: `La matière "${normalizedName}" existe déjà dans cet établissement.` });
+    }
     console.error('Erreur création matière:', err);
     return res.status(500).json({ message: 'Erreur serveur.' });
   }
@@ -56,14 +73,30 @@ router.post('/', async (req, res) => {
 // PUT /api/subjects/:id
 router.put('/:id', async (req, res) => {
   const { name, coefficient, teacherName } = req.body;
+  if (!name?.trim()) return res.status(400).json({ message: 'Le nom de la matière est requis.' });
+
+  const normalizedName = name.trim().toUpperCase();
+
   try {
+    // Vérifier doublon sur le nom (exclure la matière en cours d'édition)
+    const { rows: existing } = await pool.query(
+      `SELECT id FROM subjects WHERE UPPER(TRIM(name)) = $1 AND school = (SELECT school FROM subjects WHERE id = $2) AND id <> $2`,
+      [normalizedName, req.params.id]
+    );
+    if (existing.length > 0) {
+      return res.status(409).json({ message: `Une autre matière nommée "${normalizedName}" existe déjà dans cet établissement.` });
+    }
+
     const { rows } = await pool.query(
       `UPDATE subjects SET name=$1, coefficient=$2, teacher_name=$3 WHERE id=$4 RETURNING *`,
-      [name, coefficient ?? 1, teacherName ?? null, req.params.id]
+      [normalizedName, coefficient ?? 1, teacherName?.trim() || null, req.params.id]
     );
     if (rows.length === 0) return res.status(404).json({ message: 'Matière introuvable.' });
     return res.json(rowToSubject(rows[0]));
   } catch (err) {
+    if (err.code === '23505') {
+      return res.status(409).json({ message: `Une autre matière nommée "${normalizedName}" existe déjà dans cet établissement.` });
+    }
     console.error('Erreur mise à jour matière:', err);
     return res.status(500).json({ message: 'Erreur serveur.' });
   }

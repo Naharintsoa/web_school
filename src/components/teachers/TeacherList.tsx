@@ -137,9 +137,22 @@ export function TeacherList() {
   // ── Ajout ─────────────────────────────────────────────────────────────────
 
   const handleAdd = async (name: string, coeff: number, teacher: string) => {
-    await subjectsApi.create({ name, coefficient: coeff, teacherName: teacher, school: currentSchool });
-    setShowAddRow(false);
-    showToast(`Matière "${name}" ajoutée`, 'success');
+    const normalized = name.trim().toUpperCase();
+
+    // Vérification doublon côté client (avant l'appel réseau)
+    const duplicate = subjects.find(s => s.name.toUpperCase() === normalized);
+    if (duplicate) {
+      showToast(`La matière "${normalized}" existe déjà.`, 'error');
+      return;
+    }
+
+    try {
+      await subjectsApi.create({ name: normalized, coefficient: coeff, teacherName: teacher, school: currentSchool });
+      setShowAddRow(false);
+      showToast(`Matière "${normalized}" ajoutée`, 'success');
+    } catch (err: any) {
+      showToast(err?.message ?? 'Erreur lors de l\'ajout.', 'error');
+    }
   };
 
   // ── Édition ───────────────────────────────────────────────────────────────
@@ -158,13 +171,28 @@ export function TeacherList() {
 
   const saveEdit = async (subject: Subject, e: React.MouseEvent) => {
     e.stopPropagation();
-    await subjectsApi.update(subject.id, {
-      name: subject.name,
-      coefficient: Math.max(1, Math.min(10, editCoeff)),
-      teacherName: editTeacherName.trim(),
-    });
-    setEditingId(null);
-    showToast(`"${subject.name}" mis à jour`, 'success');
+    const trimmedTeacher = editTeacherName.trim();
+
+    // Vérification doublon de professeur : même enseignant déjà assigné à une autre matière ?
+    const teacherDuplicate = trimmedTeacher
+      ? subjects.find(s => s.id !== subject.id && s.teacherName?.trim().toLowerCase() === trimmedTeacher.toLowerCase())
+      : null;
+    if (teacherDuplicate) {
+      showToast(`"${trimmedTeacher}" est déjà assigné à "${teacherDuplicate.name}".`, 'error');
+      return;
+    }
+
+    try {
+      await subjectsApi.update(subject.id, {
+        name: subject.name,
+        coefficient: Math.max(1, Math.min(10, editCoeff)),
+        teacherName: trimmedTeacher,
+      });
+      setEditingId(null);
+      showToast(`"${subject.name}" mis à jour`, 'success');
+    } catch (err: any) {
+      showToast(err?.message ?? 'Erreur lors de la mise à jour.', 'error');
+    }
   };
 
   // ── Suppression ───────────────────────────────────────────────────────────

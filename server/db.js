@@ -120,6 +120,12 @@ export async function initDB() {
     await client.query(`CREATE INDEX IF NOT EXISTS idx_grades_term ON grades(term)`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_students_family_id ON students(family_id)`);
 
+    // 1d. Contrainte unicité matières : (nom normalisé, école) — idempotent
+    await client.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_subjects_unique_name_school
+      ON subjects (UPPER(TRIM(name)), school)
+    `);
+
     // 2. Insérer les rôles par défaut si la table est vide
     const { rows: existingRoles } = await client.query('SELECT id FROM roles LIMIT 1');
     if (existingRoles.length === 0) {
