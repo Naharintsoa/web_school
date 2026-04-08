@@ -1,6 +1,9 @@
 /**
- * Routes matières — CRUD complet.
- * Stockage PostgreSQL (remplace localStorage côté client).
+ * Routes matières — CRUD complet, isolé par établissement (school).
+ * GET    /api/subjects?school=sully
+ * POST   /api/subjects          { name, coefficient, teacherName, school }
+ * PUT    /api/subjects/:id      { name, coefficient, teacherName }
+ * DELETE /api/subjects/:id
  */
 import { Router } from 'express';
 import { pool } from '../db.js';
@@ -15,13 +18,17 @@ function rowToSubject(row) {
     name: row.name,
     coefficient: Number(row.coefficient),
     teacherName: row.teacher_name ?? '',
+    school: row.school ?? 'sully',
   };
 }
 
-// GET /api/subjects
-router.get('/', async (_req, res) => {
+// GET /api/subjects?school=sully
+router.get('/', async (req, res) => {
   try {
-    const { rows } = await pool.query('SELECT * FROM subjects ORDER BY name');
+    const { school } = req.query;
+    const { rows } = school
+      ? await pool.query('SELECT * FROM subjects WHERE school = $1 ORDER BY name', [school])
+      : await pool.query('SELECT * FROM subjects ORDER BY name');
     return res.json(rows.map(rowToSubject));
   } catch (err) {
     console.error('Erreur récupération matières:', err);
@@ -31,13 +38,13 @@ router.get('/', async (_req, res) => {
 
 // POST /api/subjects
 router.post('/', async (req, res) => {
-  const { name, coefficient, teacherName } = req.body;
+  const { name, coefficient, teacherName, school } = req.body;
   const id = `subj-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
   try {
     const { rows } = await pool.query(
-      `INSERT INTO subjects (id, name, coefficient, teacher_name)
-       VALUES ($1, $2, $3, $4) RETURNING *`,
-      [id, name, coefficient ?? 1, teacherName ?? null]
+      `INSERT INTO subjects (id, name, coefficient, teacher_name, school)
+       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+      [id, name, coefficient ?? 1, teacherName ?? null, school ?? 'sully']
     );
     return res.status(201).json(rowToSubject(rows[0]));
   } catch (err) {

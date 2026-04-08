@@ -149,53 +149,87 @@ export async function initDB() {
       console.log('Super admin créé.');
     }
 
-    // 4b. Table subjects + données par défaut
+    // 4b. Table subjects + colonne school
     await client.query(`
       CREATE TABLE IF NOT EXISTS subjects (
         id           TEXT PRIMARY KEY,
         name         TEXT NOT NULL,
         coefficient  INTEGER NOT NULL DEFAULT 1,
-        teacher_name TEXT
+        teacher_name TEXT,
+        school       TEXT NOT NULL DEFAULT 'sully'
       )
     `);
+    // Migration : ajouter school si la table existait sans cette colonne
+    await client.query(`ALTER TABLE subjects ADD COLUMN IF NOT EXISTS school TEXT NOT NULL DEFAULT 'sully'`);
+    // Rétro-compat : s'assurer que toutes les lignes sans school ont 'sully'
+    await client.query(`UPDATE subjects SET school = 'sully' WHERE school IS NULL OR school = ''`);
 
-    const defaultSubjects = [
-      { id: '1',  name: 'MATHEMATIQUES',              coefficient: 1,  teacher: 'ANDRIANIRINA N. Micah' },
-      { id: '2',  name: 'TECHNOLOGIE',                coefficient: 1,  teacher: 'ANDRIANIRINA N. Micah' },
-      { id: '3',  name: 'PHYSIQUE CHIMIE',             coefficient: 1,  teacher: 'ANDRIANIRINA N. Micah' },
-      { id: '4',  name: 'HISTOIRE GEOGRAPHIE/ E.M.C', coefficient: 1,  teacher: 'TAMARENA Hermann' },
-      { id: '5',  name: 'ANGLAIS',                    coefficient: 1,  teacher: "RAVELOMANANTSOA Mioran'i Avo" },
-      { id: '6',  name: 'ARTS PLASTIQUES',            coefficient: 1,  teacher: 'RAZAFINIMANANA Solofotiana' },
-      { id: '7',  name: 'EPS',                        coefficient: 1,  teacher: 'ANDRIAMANORO Tahiry' },
-      { id: '8',  name: 'EDUCATION MUSICALE',         coefficient: 1,  teacher: 'ANDRIAMANORO Tahiry' },
-      { id: '9',  name: 'ESPAGNOL',                   coefficient: 1,  teacher: 'RABEARIVELO Avotra H.' },
-      { id: '10', name: 'FRANCAIS',                   coefficient: 1,  teacher: 'RASOLOFOMANANA Lalasoa' },
-      { id: '11', name: 'SVT',                        coefficient: 1,  teacher: 'RAZAFIMIHAJA Saholy' },
-      { id: '12', name: 'MALAGASY',                   coefficient: 1,  teacher: 'RANOMENJANAHARY Fameno Lafatriniaina' },
+    const sullySubjects = [
+      { id: 'sully-1',  name: 'MATHEMATIQUES',              coefficient: 1,  teacher: 'ANDRIANIRINA N. Micah' },
+      { id: 'sully-2',  name: 'TECHNOLOGIE',                coefficient: 1,  teacher: 'ANDRIANIRINA N. Micah' },
+      { id: 'sully-3',  name: 'PHYSIQUE CHIMIE',             coefficient: 1,  teacher: 'ANDRIANIRINA N. Micah' },
+      { id: 'sully-4',  name: 'HISTOIRE GEOGRAPHIE/ E.M.C', coefficient: 1,  teacher: 'TAMARENA Hermann' },
+      { id: 'sully-5',  name: 'ANGLAIS',                    coefficient: 1,  teacher: "RAVELOMANANTSOA Mioran'i Avo" },
+      { id: 'sully-6',  name: 'ARTS PLASTIQUES',            coefficient: 1,  teacher: 'RAZAFINIMANANA Solofotiana' },
+      { id: 'sully-7',  name: 'EPS',                        coefficient: 1,  teacher: 'ANDRIAMANORO Tahiry' },
+      { id: 'sully-8',  name: 'EDUCATION MUSICALE',         coefficient: 1,  teacher: 'ANDRIAMANORO Tahiry' },
+      { id: 'sully-9',  name: 'ESPAGNOL',                   coefficient: 1,  teacher: 'RABEARIVELO Avotra H.' },
+      { id: 'sully-10', name: 'FRANCAIS',                   coefficient: 1,  teacher: 'RASOLOFOMANANA Lalasoa' },
+      { id: 'sully-11', name: 'SVT',                        coefficient: 1,  teacher: 'RAZAFIMIHAJA Saholy' },
+      { id: 'sully-12', name: 'MALAGASY',                   coefficient: 1,  teacher: 'RANOMENJANAHARY Fameno Lafatriniaina' },
     ];
 
-    const { rows: existingSubjects } = await client.query('SELECT id FROM subjects LIMIT 1');
-    if (existingSubjects.length === 0) {
-      // Première installation : insérer avec les noms de professeurs
-      for (const s of defaultSubjects) {
-        await client.query(
-          `INSERT INTO subjects (id, name, coefficient, teacher_name)
-           VALUES ($1, $2, $3, $4) ON CONFLICT (id) DO NOTHING`,
-          [s.id, s.name, s.coefficient, s.teacher]
-        );
-      }
-      console.log('Matières par défaut insérées avec professeurs.');
-    } else {
-      // Base existante : remplir les teacher_name manquants uniquement
-      for (const s of defaultSubjects) {
-        await client.query(
-          `UPDATE subjects SET teacher_name = $1
-           WHERE id = $2 AND (teacher_name IS NULL OR teacher_name = '')`,
-          [s.teacher, s.id]
-        );
-      }
-      console.log('Noms de professeurs mis à jour pour les matières existantes.');
+    // Matières Annexe — mêmes intitulés, profs à assigner ultérieurement
+    const annexeSubjects = [
+      { id: 'annexe-1',  name: 'MATHEMATIQUES',              coefficient: 1 },
+      { id: 'annexe-2',  name: 'TECHNOLOGIE',                coefficient: 1 },
+      { id: 'annexe-3',  name: 'PHYSIQUE CHIMIE',             coefficient: 1 },
+      { id: 'annexe-4',  name: 'HISTOIRE GEOGRAPHIE/ E.M.C', coefficient: 1 },
+      { id: 'annexe-5',  name: 'ANGLAIS',                    coefficient: 1 },
+      { id: 'annexe-6',  name: 'ARTS PLASTIQUES',            coefficient: 1 },
+      { id: 'annexe-7',  name: 'EPS',                        coefficient: 1 },
+      { id: 'annexe-8',  name: 'EDUCATION MUSICALE',         coefficient: 1 },
+      { id: 'annexe-9',  name: 'ESPAGNOL',                   coefficient: 1 },
+      { id: 'annexe-10', name: 'FRANCAIS',                   coefficient: 1 },
+      { id: 'annexe-11', name: 'SVT',                        coefficient: 1 },
+      { id: 'annexe-12', name: 'MALAGASY',                   coefficient: 1 },
+    ];
+
+    // Insérer les matières Sully (avec profs)
+    for (const s of sullySubjects) {
+      await client.query(
+        `INSERT INTO subjects (id, name, coefficient, teacher_name, school)
+         VALUES ($1, $2, $3, $4, 'sully')
+         ON CONFLICT (id) DO NOTHING`,
+        [s.id, s.name, s.coefficient, s.teacher ?? null]
+      );
     }
+    // Insérer les matières Annexe (sans profs — à compléter)
+    for (const s of annexeSubjects) {
+      await client.query(
+        `INSERT INTO subjects (id, name, coefficient, teacher_name, school)
+         VALUES ($1, $2, $3, NULL, 'sully-annexe')
+         ON CONFLICT (id) DO NOTHING`,
+        [s.id, s.name, s.coefficient]
+      );
+    }
+
+    // Rétro-compat : les anciennes lignes (id 1..12) héritent de sully + profs
+    const legacyTeachers = {
+      '1': 'ANDRIANIRINA N. Micah', '2': 'ANDRIANIRINA N. Micah', '3': 'ANDRIANIRINA N. Micah',
+      '4': 'TAMARENA Hermann', '5': "RAVELOMANANTSOA Mioran'i Avo", '6': 'RAZAFINIMANANA Solofotiana',
+      '7': 'ANDRIAMANORO Tahiry', '8': 'ANDRIAMANORO Tahiry', '9': 'RABEARIVELO Avotra H.',
+      '10': 'RASOLOFOMANANA Lalasoa', '11': 'RAZAFIMIHAJA Saholy', '12': 'RANOMENJANAHARY Fameno Lafatriniaina',
+    };
+    for (const [id, teacher] of Object.entries(legacyTeachers)) {
+      await client.query(
+        `UPDATE subjects SET school = 'sully', teacher_name = COALESCE(NULLIF(teacher_name,''), $1)
+         WHERE id = $2`,
+        [teacher, id]
+      );
+    }
+
+    console.log('Matières Sully et Sully Annexe initialisées.');
 
     // 4. Insérer les templates de documents par défaut si absents
     await client.query(`ALTER TABLE document_templates ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`);

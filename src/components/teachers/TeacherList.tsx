@@ -16,6 +16,7 @@ import {
 import { subjectsApi } from '../../services/api/subjectsApi';
 import { SubjectExams } from '../subjects/SubjectExams';
 import { useToast } from '../../contexts/ToastContext';
+import { useSchool, SCHOOLS } from '../../contexts/SchoolContext';
 import { FR } from '../../constants/translations';
 import type { Subject } from '../../types';
 
@@ -103,6 +104,7 @@ function AddRow({ onAdd, onCancel }: AddRowProps) {
 
 export function TeacherList() {
   const { showToast } = useToast();
+  const { currentSchool } = useSchool();
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
@@ -114,28 +116,28 @@ export function TeacherList() {
   const [editCoeff, setEditCoeff] = useState(1);
 
   const loadSubjects = useCallback(async () => {
-    const data = await subjectsApi.getAll();
+    const data = await subjectsApi.getAll(currentSchool);
     setSubjects(data);
     setLoading(false);
-  }, []);
+  }, [currentSchool]);
 
   useEffect(() => { loadSubjects(); }, [loadSubjects]);
 
   // Abonnement → refresh automatique quand une matière change ailleurs
   useEffect(() => {
     const unsubscribe = subjectsApi.subscribe(() => {
-      subjectsApi.getAll().then(data => {
+      subjectsApi.getAll(currentSchool).then(data => {
         setSubjects(data);
         setSelectedSubject(prev => prev ? (data.find(s => s.id === prev.id) ?? null) : null);
       });
     });
     return unsubscribe;
-  }, []);
+  }, [currentSchool]);
 
   // ── Ajout ─────────────────────────────────────────────────────────────────
 
   const handleAdd = async (name: string, coeff: number, teacher: string) => {
-    await subjectsApi.create({ name, coefficient: coeff, teacherName: teacher });
+    await subjectsApi.create({ name, coefficient: coeff, teacherName: teacher, school: currentSchool });
     setShowAddRow(false);
     showToast(`Matière "${name}" ajoutée`, 'success');
   };
@@ -216,8 +218,11 @@ export function TeacherList() {
             <GraduationCap className="h-7 w-7 text-indigo-600" />
             <div>
               <h1 className="text-xl font-bold text-gray-900">{FR.teachers.list}</h1>
-              <p className="text-xs text-gray-500 mt-0.5">
-                {subjects.length} matière{subjects.length !== 1 ? 's' : ''} — synchronisé en temps réel
+              <p className="text-xs mt-0.5">
+                <span className={currentSchool === 'sully-annexe' ? 'text-violet-600 font-medium' : 'text-indigo-600 font-medium'}>
+                  {SCHOOLS[currentSchool].name}
+                </span>
+                <span className="text-gray-400 ml-1">— {subjects.length} matière{subjects.length !== 1 ? 's' : ''}</span>
               </p>
             </div>
           </div>

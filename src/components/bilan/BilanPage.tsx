@@ -6,25 +6,33 @@ import { createPortal } from 'react-dom';
 import { Printer, Users, ChevronRight } from 'lucide-react';
 import { studentApi } from '../../services/api';
 import { useSchoolYear } from '../../contexts/SchoolYearContext';
+import { useSchool, SCHOOLS } from '../../contexts/SchoolContext';
 import type { Student } from '../../types';
-import { BILAN_CLASSES } from './bilanData';
+import { BILAN_CLASSES, BILAN_CLASSES_ANNEXE } from './bilanData';
 import { BilanCouverture } from './BilanCouverture';
-
-type BilanClass = typeof BILAN_CLASSES[number];
 
 export function BilanPage() {
   const { currentYear } = useSchoolYear();
-  const [selectedClass, setSelectedClass] = useState<BilanClass>('CP');
+  const { currentSchool } = useSchool();
+  const isAnnexe = currentSchool === 'sully-annexe';
+  const classList = isAnnexe ? BILAN_CLASSES_ANNEXE : BILAN_CLASSES;
+
+  const [selectedClass, setSelectedClass] = useState<string>(classList[0]);
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [printing, setPrinting] = useState(false);
 
+  // Réinitialiser la classe sélectionnée si l'établissement change
+  useEffect(() => {
+    setSelectedClass(classList[0]);
+  }, [currentSchool]);
+
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setSelectedIds(new Set());
-    studentApi.getAll(currentYear).then((all) => {
+    studentApi.getAll(currentYear, currentSchool).then((all) => {
       if (cancelled) return;
       setStudents(all.filter(s => s.grade === selectedClass));
       setLoading(false);
@@ -32,7 +40,7 @@ export function BilanPage() {
       if (!cancelled) setLoading(false);
     });
     return () => { cancelled = true; };
-  }, [selectedClass, currentYear]);
+  }, [selectedClass, currentYear, currentSchool]);
 
   // Quand printing passe à true, React re-rend le contenu puis on déclenche l'impression
   useEffect(() => {
@@ -99,18 +107,25 @@ export function BilanPage() {
     <div className="p-6 max-w-2xl mx-auto">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-slate-800">Bilan des Acquis Scolaires</h1>
-        <p className="text-slate-500 text-sm mt-1">Sélectionnez une classe puis les élèves à imprimer.</p>
+        <p className="text-sm mt-1">
+          <span className={`font-medium ${isAnnexe ? 'text-violet-600' : 'text-indigo-600'}`}>
+            {SCHOOLS[currentSchool].name}
+          </span>
+          <span className="text-slate-400 ml-1">— Sélectionnez une classe puis les élèves à imprimer.</span>
+        </p>
       </div>
 
       {/* Sélecteur de classe */}
       <div className="flex flex-wrap gap-2 mb-6">
-        {BILAN_CLASSES.map(cls => (
+        {classList.map(cls => (
           <button
             key={cls}
             onClick={() => setSelectedClass(cls)}
             className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all border ${
               selectedClass === cls
-                ? 'bg-indigo-600 text-white border-indigo-600 shadow'
+                ? isAnnexe
+                  ? 'bg-violet-600 text-white border-violet-600 shadow'
+                  : 'bg-indigo-600 text-white border-indigo-600 shadow'
                 : 'bg-white text-slate-700 border-slate-300 hover:border-indigo-400 hover:text-indigo-600'
             }`}
           >

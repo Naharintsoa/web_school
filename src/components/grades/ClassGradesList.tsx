@@ -13,6 +13,7 @@ import { SubjectGradeEntry } from './SubjectGradeEntry';
 import { ReportCard } from './report-card/ReportCard';
 import { ClassCouncilView } from './ClassCouncilView';
 import { useSchoolYear } from '../../contexts/SchoolYearContext';
+import { useSchool } from '../../contexts/SchoolContext';
 import { studentApi, gradesApi } from '../../services/api';
 import { subjectsApi } from '../../services/api/subjectsApi';
 import { mockTeachers } from '../../data/mockTeachers';
@@ -34,6 +35,7 @@ interface ClassSubjectStats {
 
 export function ClassGradesList({ grade, onBack }: ClassGradesListProps) {
   const { currentYear } = useSchoolYear();
+  const { currentSchool } = useSchool();
   const [students, setStudents] = useState<Student[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
@@ -54,35 +56,34 @@ export function ClassGradesList({ grade, onBack }: ClassGradesListProps) {
     return '';
   })();
 
-  useEffect(() => { loadData(); }, [grade, currentYear]);
+  useEffect(() => { loadData(); }, [grade, currentYear, currentSchool]);
 
-  // S'abonner aux modifications de matières (ajout, suppression, édition)
-  // → refresh automatique sans naviguer ailleurs
+  // S'abonner aux modifications de matières
   useEffect(() => {
     const unsubscribe = subjectsApi.subscribe(() => {
-      subjectsApi.getAll().then(setSubjects);
+      subjectsApi.getAll(currentSchool).then(setSubjects);
     });
     return unsubscribe;
-  }, []);
+  }, [currentSchool]);
 
   const loadData = useCallback(async () => {
     const [loadedStudents, loadedSubjects] = await Promise.all([
-      studentApi.getAll(currentYear),
-      subjectsApi.getAll(),
+      studentApi.getAll(currentYear, currentSchool),
+      subjectsApi.getAll(currentSchool),
     ]);
     setStudents(loadedStudents.filter(s => s.grade === grade));
     setSubjects(loadedSubjects);
-  }, [grade, currentYear]);
+  }, [grade, currentYear, currentSchool]);
 
   const handleSubjectsChange = async () => {
-    const updated = await subjectsApi.getAll();
+    const updated = await subjectsApi.getAll(currentSchool);
     setSubjects(updated);
   };
 
   const loadGrades = useCallback(async (student: Student) => {
     const [studentGrades, allStudents, allGrades] = await Promise.all([
       gradesApi.getByStudent(student.id),
-      studentApi.getAll(currentYear),
+      studentApi.getAll(currentYear, currentSchool),
       gradesApi.getAll(),
     ]);
     setGrades(studentGrades);

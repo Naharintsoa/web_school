@@ -9,4 +9,6 @@ export interface Subject {
   coefficient: number;
   /** Nom du professeur qui enseigne cette matière (pour le bulletin) */
   teacherName?: string;
+  /** Établissement auquel appartient cette matière */
+  school?: string;
 }

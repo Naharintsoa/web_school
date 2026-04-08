@@ -19,8 +19,9 @@ function subscribe(fn: Listener): () => void {
 }
 
 export const subjectsApi = {
-  getAll: async (): Promise<Subject[]> => {
-    return apiFetch<Subject[]>('/subjects');
+  getAll: async (school?: string): Promise<Subject[]> => {
+    const url = school ? `/subjects?school=${encodeURIComponent(school)}` : '/subjects';
+    return apiFetch<Subject[]>(url);
   },
 
   create: async (subject: Omit<Subject, 'id'>): Promise<Subject> => {
