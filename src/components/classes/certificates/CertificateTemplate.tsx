@@ -93,7 +93,12 @@ export function CertificateTemplate({ type, student }: CertificateTemplateProps)
             {/* Signature */}
             <div className="text-right mr-[20px]">
               <p className="text-[10px] font-tahoma">Antananarivo, le {today}</p>
-              <p className="mt-[40px] text-[12px] font-semibold font-tahoma">RAMANANIRAINY Norotahiana</p>
+              <img
+                src="/assets/signature-directrice.png"
+                alt="Signature"
+                style={{ height: '50px', marginLeft: 'auto', display: 'block', marginTop: '4px' }}
+              />
+              <p className="text-[12px] font-semibold font-tahoma">RAMANANIRAINY Norotahiana</p>
             </div>
           </div>
         </div>
