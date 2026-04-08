@@ -21,10 +21,37 @@ function chunk<T>(arr: T[], n: number): T[][] {
 
 export function CertificateMultiPrint({ students, type, onDone }: CertificateMultiPrintProps) {
   useEffect(() => {
-    const timer = setTimeout(() => {
-      window.print();
-      onDone();
-    }, 300);
+    // Attendre que toutes les images du portal soient chargées avant d'imprimer
+    // (le portal est off-screen, le navigateur peut retarder le chargement des <img>)
+    const waitForImages = () => {
+      const portal = document.querySelector('.cert-multi-portal');
+      if (!portal) { window.print(); onDone(); return; }
+
+      const imgs = Array.from(portal.querySelectorAll('img')) as HTMLImageElement[];
+      const pending = imgs.filter(img => !img.complete);
+
+      if (pending.length === 0) {
+        window.print();
+        onDone();
+        return;
+      }
+
+      let resolved = 0;
+      const tryPrint = () => {
+        resolved++;
+        if (resolved >= pending.length) { window.print(); onDone(); }
+      };
+      pending.forEach(img => {
+        img.addEventListener('load',  tryPrint, { once: true });
+        img.addEventListener('error', tryPrint, { once: true }); // imprimer même si erreur
+      });
+
+      // Sécurité : imprimer après 3 s max même si une image ne répond pas
+      setTimeout(() => { window.print(); onDone(); }, 3000);
+    };
+
+    // Laisser React rendre le portal avant de chercher les images
+    const timer = setTimeout(waitForImages, 100);
     return () => clearTimeout(timer);
   }, []);
 
@@ -118,6 +145,13 @@ export function CertificateMultiPrint({ students, type, onDone }: CertificateMul
             outline: 1px solid #2097bf !important;
             border-radius: 8px !important;
             padding: 3px !important;
+          }
+
+          /* Forcer l'affichage des images (certains navigateurs les masquent en print) */
+          .cert-slot img {
+            display: block !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
 
           body, html { margin: 0; padding: 0; background: white; }
