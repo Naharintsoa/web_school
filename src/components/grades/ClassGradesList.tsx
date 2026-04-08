@@ -5,7 +5,7 @@
  * - Gestion des matières (ajouter/supprimer)
  * - Génération et impression du bulletin
  */
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Search, Printer, ArrowLeft, Settings2, Users, BookOpen, UserCircle, Calculator } from 'lucide-react';
 import { GradeInput } from './GradeInput';
 import { SubjectManager } from './SubjectManager';
@@ -81,16 +81,16 @@ export function ClassGradesList({ grade, onBack }: ClassGradesListProps) {
   };
 
   const loadGrades = useCallback(async (student: Student) => {
-    // students est déjà chargé dans le state — pas besoin de rappeler l'API
-    const [studentGrades, allGrades] = await Promise.all([
+    const [studentGrades, allStudents, allGrades] = await Promise.all([
       gradesApi.getByStudent(student.id),
-      gradesApi.getByClass(grade, currentYear, currentSchool),
+      studentApi.getAll(currentYear, currentSchool),
+      gradesApi.getAll(),
     ]);
     setGrades(studentGrades);
 
-    const classIds = new Set(students.map(s => s.id));
+    const classIds = new Set(allStudents.filter(s => s.grade === grade).map(s => s.id));
     setAllClassGrades(allGrades.filter(g => classIds.has(g.studentId) && g.term === selectedTerm));
-  }, [grade, selectedTerm, currentYear, currentSchool, students]);
+  }, [grade, selectedTerm, currentYear]);
 
   const handleStudentSelect = async (student: Student) => {
     setSelectedStudent(student);
@@ -131,15 +131,15 @@ export function ClassGradesList({ grade, onBack }: ClassGradesListProps) {
     await loadGrades(selectedStudent);
   };
 
-  /** Calcul des stats de classe par matière — mémoïsé */
-  const classStats = useMemo((): Record<string, ClassSubjectStats> => {
+  /** Calcul des stats de classe par matière */
+  const getClassStats = (): Record<string, ClassSubjectStats> => {
     const stats: Record<string, ClassSubjectStats> = {};
     for (const subject of subjects) {
       const sg = allClassGrades.filter(g => g.subjectId === subject.id);
       stats[subject.id] = calculateClassStats(sg);
     }
     return stats;
-  }, [subjects, allClassGrades]);
+  };
 
   // N'inclure que les matières encore actives (les supprimées sont exclues du bulletin)
   const activeSubjectIds = new Set(subjects.map(s => s.id));
@@ -183,7 +183,7 @@ export function ClassGradesList({ grade, onBack }: ClassGradesListProps) {
         grades={currentTermGrades}
         allGrades={grades}
         subjects={subjects}
-        classStats={classStats}
+        classStats={getClassStats()}
         term={selectedTerm}
         schoolYear={currentYear}
         classAverage={calculateAverage(allClassGrades)}

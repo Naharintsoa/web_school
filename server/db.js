@@ -113,14 +113,7 @@ export async function initDB() {
     // Rétro-compatibilité : s'assurer que les élèves existants ont bien school = 'sully'
     await client.query(`UPDATE students SET school = 'sully' WHERE school IS NULL`);
 
-    // 1c. Index de performance (CREATE INDEX IF NOT EXISTS — idempotent)
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_students_year_school ON students(school_year, school)`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_students_grade ON students(grade)`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_grades_student_id ON grades(student_id)`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_grades_term ON grades(term)`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_students_family_id ON students(family_id)`);
-
-    // 1d. Contrainte unicité matières : (nom normalisé, école) — idempotent
+    // Contrainte unicité matières : (nom normalisé, école) — idempotent
     await client.query(`
       CREATE UNIQUE INDEX IF NOT EXISTS idx_subjects_unique_name_school
       ON subjects (UPPER(TRIM(name)), school)

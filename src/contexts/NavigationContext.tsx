@@ -2,7 +2,7 @@
  * Contexte de navigation global — basé sur React Router v6.
  * Permet à n'importe quel composant de naviguer via useNavigation().
  */
-import { createContext, useContext, useCallback, useMemo } from 'react';
+import { createContext, useContext } from 'react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 
 interface NavigationContextType {
@@ -29,26 +29,26 @@ export function useNavigationProvider() {
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const navigate = useCallback((path: string) => nav(path), [nav]);
+  const navigate = (path: string) => nav(path);
 
-  const navigateToGrades = useCallback((grade: string) => {
+  const navigateToGrades = (grade: string) => {
     nav(`/grades?classe=${encodeURIComponent(grade)}`);
-  }, [nav]);
+  };
 
   const preselectedGrade = searchParams.get('classe');
 
-  const clearPreselectedGrade = useCallback(() => {
+  const clearPreselectedGrade = () => {
     setSearchParams(prev => {
       prev.delete('classe');
       return prev;
     });
-  }, [setSearchParams]);
+  };
 
-  return useMemo(() => ({
+  return {
     navigate,
     navigateToGrades,
     activePath: location.pathname,
     preselectedGrade,
     clearPreselectedGrade,
-  }), [navigate, navigateToGrades, location.pathname, preselectedGrade, clearPreselectedGrade]);
+  };
 }
