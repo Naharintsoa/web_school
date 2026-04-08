@@ -17,8 +17,14 @@ import { requireAuth } from '../middleware/auth.js';
 const router = Router();
 router.use(requireAuth);
 
-const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434';
-const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'mistral';
+const OLLAMA_URL   = process.env.OLLAMA_URL          || 'http://localhost:11434';
+const OLLAMA_MODEL = process.env.OLLAMA_MODEL         || 'mistral';
+const OLLAMA_TIMEOUT_MS  = parseInt(process.env.OLLAMA_TIMEOUT_MS  || '60000', 10); // 60 s par tentative
+const OLLAMA_MAX_RETRIES = parseInt(process.env.OLLAMA_MAX_RETRIES || '3',     10); // 3 tentatives max
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
 
 // ─── Définition des outils JSON ───────────────────────────────────────────────
 
@@ -221,41 +227,70 @@ ${TOOLS_DEFINITIONS}
 IMPORTANT: Quand tu dois interroger la base de données, réponds en incluant les appels d'outils au format JSON
 Entre tes appels d'outils dans <tool_call> et </tool_call>, puis attends les résultats et fournis une réponse finale.`;
 
-// ─── Appel Ollama ─────────────────────────────────────────────────────────────
+// ─── Appel Ollama (une seule tentative) ──────────────────────────────────────
 
-async function callOllama(messages, systemPrompt) {
-  try {
-    const response = await fetch(`${OLLAMA_URL}/api/generate`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: OLLAMA_MODEL,
-        prompt: formatPromptForOllama(messages, systemPrompt),
-        stream: false,
-        temperature: 0.3,
-      }),
-    });
+async function callOllamaOnce(messages, systemPrompt, signal) {
+  const response = await fetch(`${OLLAMA_URL}/api/chat`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    signal,
+    body: JSON.stringify({
+      model: OLLAMA_MODEL,
+      stream: false,
+      options: { temperature: 0.3 },
+      messages: [
+        { role: 'system', content: systemPrompt },
+        ...messages,
+      ],
+    }),
+  });
 
-    if (!response.ok) throw new Error(`Ollama error: ${response.statusText}`);
-    const data = await response.json();
-    return data.response || '';
-  } catch (err) {
-    console.error('Ollama error:', err);
-    throw new Error(`Impossible de contacter Ollama sur ${OLLAMA_URL}`);
+  if (!response.ok) {
+    const text = await response.text().catch(() => response.statusText);
+    const err = new Error(`Ollama HTTP ${response.status}: ${text}`);
+    err.status = response.status;
+    throw err;
   }
+
+  const data = await response.json();
+  return data.message?.content || '';
 }
 
-function formatPromptForOllama(messages, systemPrompt) {
-  let prompt = `${systemPrompt}\n\n`;
-  for (const msg of messages) {
-    if (msg.role === 'user') {
-      prompt += `Utilisateur: ${msg.content}\n\n`;
-    } else if (msg.role === 'assistant') {
-      prompt += `Assistant: ${msg.content}\n\n`;
+// ─── Appel Ollama avec retry + timeout ────────────────────────────────────────
+
+async function callOllama(messages, systemPrompt) {
+  let lastErr;
+
+  for (let attempt = 1; attempt <= OLLAMA_MAX_RETRIES; attempt++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(new Error('timeout')), OLLAMA_TIMEOUT_MS);
+
+    try {
+      const text = await callOllamaOnce(messages, systemPrompt, controller.signal);
+      clearTimeout(timer);
+      return text;
+    } catch (err) {
+      clearTimeout(timer);
+      lastErr = err;
+
+      // Ne pas réessayer sur les erreurs 4xx (mauvaise requête, modèle introuvable…)
+      const is4xx = err.status && err.status >= 400 && err.status < 500;
+      if (is4xx) break;
+
+      // Ne pas réessayer si c'est le dernier essai
+      if (attempt === OLLAMA_MAX_RETRIES) break;
+
+      const delay = attempt * 2000; // 2 s, 4 s, …
+      const reason = err.name === 'AbortError' ? `timeout (${OLLAMA_TIMEOUT_MS / 1000} s)` : err.message;
+      console.warn(`[Ollama] tentative ${attempt}/${OLLAMA_MAX_RETRIES} échouée (${reason}). Nouvel essai dans ${delay / 1000} s…`);
+      await sleep(delay);
     }
   }
-  prompt += `Assistant: `;
-  return prompt;
+
+  const reason = lastErr?.name === 'AbortError'
+    ? `délai dépassé (${OLLAMA_TIMEOUT_MS / 1000} s)`
+    : lastErr?.message || 'erreur inconnue';
+  throw new Error(`Ollama indisponible après ${OLLAMA_MAX_RETRIES} tentatives : ${reason}`);
 }
 
 // ─── Extraction d'outils du texte ──────────────────────────────────────────────

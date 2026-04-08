@@ -6,25 +6,26 @@ import { useSchoolYear } from '../../../contexts/SchoolYearContext';
 function CertificateHeader() {
   return (
     <div className="flex items-center mb-2">
-      {/* Logo avec marge à gauche */}
-      <div className="w-30 h-20 flex-shrink-0 ml-5">
+      {/* Logo */}
+      <div className="w-28 h-20 flex-shrink-0 ml-4">
         <img
-          src="/assets/logo-sully.png" // Assurez-vous que l'image est présente dans votre dossier 'assets'
+          src="/assets/logo-sully.png"
           alt="Logo Sully"
           className="w-full h-full object-contain"
         />
       </div>
 
-      {/* Texte à droite */}
+      {/* Texte centré */}
       <div className="ml-2 text-center flex-grow">
-        <h1 className="text-[20px] font-bold text-[#2097bf] uppercase">
+        <p className="text-[10px] italic text-gray-700 leading-tight">L'issue vers la réussite</p>
+        <h1 className="text-[16px] font-bold text-[#2097bf] uppercase leading-tight">
           COLLEGE PRIVE SULLY
         </h1>
-
-        <p className="text-[10px] leading-4 text-gray-800">
-          Lot IV A 16 bis Ambodivonkely Ambohimanarina<br />
-          Tel: <strong>020 85 234 94</strong> - <strong>034 16 351 52</strong> | Email: <strong>sully@moov.mg</strong><br />
-          CISCO Antananarivo Ville Code: <strong>101 011 793 ZAP VI</strong><br />
+        <p className="text-[10px] italic text-gray-700 leading-tight mb-1">Savoir être-Savoir · Savoir faire</p>
+        <p className="text-[9px] leading-[1.35] text-gray-800">
+          Lot IV A 16 bis Ambodivonkely - Téléphone: <strong>020 85 234 94</strong> · Email:{' '}
+          <a href="mailto:sully.amb@moov.mg" className="text-[#2097bf]">sully.amb@moov.mg</a><br />
+          CISCO Antananarivo Ville - Code : <strong>101 011 793</strong> · ZAP VI<br />
           AO N° 036/2019 - DRENETP/ANALA/AO du 21/11/19
         </p>
       </div>
@@ -108,9 +109,9 @@ export function CertificateTemplate({ type, student }: CertificateTemplateProps)
       <style>
         {`
           @media print {
-            body, html {
-              overflow: hidden;
-            }
+            body, html { overflow: hidden; }
+
+            /* Mode impression solo (CertificatePreview) */
             .certificate-container {
               display: flex;
               justify-content: center;
@@ -119,8 +120,11 @@ export function CertificateTemplate({ type, student }: CertificateTemplateProps)
               background-color: white;
             }
 
+            /* En mode solo chaque .page commence sur une nouvelle page.
+               CertificateMultiPrint écrase cette règle via .cert-slot .page */
             .page {
               page-break-before: always;
+              break-before: page;
               width: 20cm;
               height: 14cm;
               margin-top: 25px;

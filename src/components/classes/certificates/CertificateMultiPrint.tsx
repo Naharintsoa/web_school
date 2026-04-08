@@ -13,7 +13,6 @@ interface CertificateMultiPrintProps {
   onDone: () => void;
 }
 
-/** Découpe un tableau en sous-tableaux de taille n */
 function chunk<T>(arr: T[], n: number): T[][] {
   const result: T[][] = [];
   for (let i = 0; i < arr.length; i += n) result.push(arr.slice(i, i + n));
@@ -25,7 +24,7 @@ export function CertificateMultiPrint({ students, type, onDone }: CertificateMul
     const timer = setTimeout(() => {
       window.print();
       onDone();
-    }, 250);
+    }, 300);
     return () => clearTimeout(timer);
   }, []);
 
@@ -35,8 +34,8 @@ export function CertificateMultiPrint({ students, type, onDone }: CertificateMul
     <div className="cert-multi-portal">
       {pairs.map((pair, pi) => (
         <div key={pi} className="cert-pair-page">
-          {pair.map((s) => (
-            <div key={s.id} className="cert-slot">
+          {pair.map((s, si) => (
+            <div key={s.id} className={`cert-slot${si === 0 && pair.length === 2 ? ' cert-slot--top' : ''}`}>
               <CertificateTemplate type={type} student={s} />
             </div>
           ))}
@@ -44,7 +43,7 @@ export function CertificateMultiPrint({ students, type, onDone }: CertificateMul
       ))}
 
       <style>{`
-        /* ── Masqué à l'écran, rendu dans le DOM mais invisible ── */
+        /* ── Invisible à l'écran ── */
         .cert-multi-portal {
           position: fixed;
           top: -99999px;
@@ -54,7 +53,7 @@ export function CertificateMultiPrint({ students, type, onDone }: CertificateMul
         }
 
         @media print {
-          /* Cacher tout sauf le portal */
+          /* Masquer tout sauf le portal */
           body > *:not(.cert-multi-portal) { display: none !important; }
 
           .cert-multi-portal {
@@ -64,7 +63,7 @@ export function CertificateMultiPrint({ students, type, onDone }: CertificateMul
             display: block !important;
           }
 
-          /* Page = 1 paire de certificats */
+          /* Une page = une paire de certificats */
           .cert-pair-page {
             page-break-after: always;
             break-after: page;
@@ -74,7 +73,7 @@ export function CertificateMultiPrint({ students, type, onDone }: CertificateMul
             justify-content: space-evenly;
             width: 210mm;
             height: 297mm;
-            padding: 5mm 0;
+            padding: 6mm 0 4mm;
             box-sizing: border-box;
             background: white;
           }
@@ -83,33 +82,42 @@ export function CertificateMultiPrint({ students, type, onDone }: CertificateMul
             break-after: avoid;
           }
 
-          /* Chaque slot occupe la moitié de la page */
+          /* Chaque slot : annuler le saut de page individuel */
           .cert-slot {
             width: 100%;
             display: flex;
             justify-content: center;
           }
 
-          /* Séparateur pointillé entre les 2 certificats */
-          .cert-slot:not(:last-child)::after {
-            content: '';
-            display: block;
-            width: 18cm;
-            border-bottom: 1px dashed #bbb;
-            margin: 3mm auto 0;
+          /* Ligne pointillée séparant les 2 certificats */
+          .cert-slot--top {
+            border-bottom: 1px dashed #b0b8c8;
+            padding-bottom: 4mm;
+            margin-bottom: 4mm;
           }
 
-          /* Réduire le .certificate-container et .page pour tenir 2 par page */
+          /* ── Écraser les styles print de CertificateTemplate ── */
+
+          /* Annuler le saut de page solo */
+          .cert-slot .page {
+            page-break-before: avoid !important;
+            break-before: avoid !important;
+          }
+
           .cert-slot .certificate-container {
-            padding: 2px !important;
+            padding: 0 !important;
             background: white !important;
           }
+
+          /* Dimensions pour tenir 2 par page A4 (297mm - ~20mm marges = 277mm / 2 ≈ 133mm) */
           .cert-slot .page {
-            width: 19cm !important;
-            height: 13.5cm !important;
-            margin-top: 3mm !important;
+            width: 190mm !important;
+            height: 128mm !important;
+            margin-top: 0 !important;
             border: 3px double #2097bf !important;
+            outline: 1px solid #2097bf !important;
             border-radius: 8px !important;
+            padding: 3px !important;
           }
 
           body, html { margin: 0; padding: 0; background: white; }

@@ -47,11 +47,11 @@ export function Chatbot() {
     try {
       const reply = await chatApi.send(updated, currentYear);
       setMessages([...updated, { role: 'assistant', content: reply }]);
-    } catch {
-      setMessages([...updated, {
-        role: 'assistant',
-        content: 'Désolé, une erreur est survenue. Vérifiez que le serveur est en ligne.',
-      }]);
+    } catch (err) {
+      const msg = err instanceof Error && err.message === 'timeout'
+        ? 'Ollama met trop de temps à répondre. Réessayez dans un instant ou vérifiez que le modèle est chargé.'
+        : 'Impossible de contacter le serveur. Vérifiez qu\'Ollama est en cours d\'exécution.';
+      setMessages([...updated, { role: 'assistant', content: msg }]);
     } finally {
       setLoading(false);
     }
