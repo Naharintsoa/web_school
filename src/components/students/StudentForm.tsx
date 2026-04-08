@@ -1,6 +1,7 @@
 import React from 'react';
 import type { Student, Grade } from '../../types';
 import { useSchoolYear } from '../../contexts/SchoolYearContext';
+import { useSchool } from '../../contexts/SchoolContext';
 import { getGradeCycle } from '../../utils/cycles';
 import { StudentInfoSection } from './form-sections/StudentInfoSection';
 import { ParentInfoSection } from './form-sections/ParentInfoSection';
@@ -27,6 +28,7 @@ const defaultParentInfo = {
 
 export function StudentForm({ student, initialGrade, onSubmit, onCancel }: StudentFormProps) {
   const { currentYear } = useSchoolYear();
+  const { currentSchool } = useSchool();
   const [formData, setFormData] = React.useState<Omit<Student, 'id'>>({
     firstName: student?.firstName || '',
     lastName: student?.lastName || '',
@@ -41,6 +43,7 @@ export function StudentForm({ student, initialGrade, onSubmit, onCancel }: Stude
     schoolYear: student?.schoolYear || currentYear,
     studentNumber: student?.studentNumber || 0,
     matricule: student?.matricule || '',
+    school: student?.school ?? currentSchool,
   });
 
   const handleSubmit = (e: React.FormEvent) => {

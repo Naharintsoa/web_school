@@ -15,11 +15,13 @@ import { studentApi } from '../../services/api';
 import { archiveApi } from '../../services/archiveApi';
 import { useToast } from '../../contexts/ToastContext';
 import { useSchoolYear } from '../../contexts/SchoolYearContext';
+import { useSchool } from '../../contexts/SchoolContext';
 import { FR } from '../../constants/translations';
 
 export function StudentList() {
   const { showToast } = useToast();
   const { currentYear } = useSchoolYear();
+  const { currentSchool } = useSchool();
   const [students, setStudents] = useState<Student[]>([]);
   const [archivedStudents, setArchivedStudents] = useState<ArchivedStudent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -33,12 +35,12 @@ export function StudentList() {
   useEffect(() => {
     loadStudents();
     loadArchivedStudents();
-  }, [currentYear]);
+  }, [currentYear, currentSchool]);
 
   const loadStudents = async () => {
     setIsLoading(true);
     try {
-      const data = await studentApi.getAll(currentYear);
+      const data = await studentApi.getAll(currentYear, currentSchool);
       setStudents(data);
     } catch {
       showToast('Erreur lors du chargement des élèves', 'error');
@@ -72,7 +74,7 @@ export function StudentList() {
 
   const handleStudentSubmit = async (studentData: Omit<Student, 'id'>) => {
     try {
-      await studentApi.create(studentData);
+      await studentApi.create({ ...studentData, school: currentSchool });
       await loadStudents();
       setShowStudentForm(false);
       setSelectedGrade(null);
