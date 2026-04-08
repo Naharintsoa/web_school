@@ -146,7 +146,7 @@ export async function initDB() {
       console.log('Super admin créé.');
     }
 
-    // 4b. Table subjects + données par défaut (coefficient 1 pour toutes)
+    // 4b. Table subjects + données par défaut
     await client.query(`
       CREATE TABLE IF NOT EXISTS subjects (
         id           TEXT PRIMARY KEY,
@@ -155,29 +155,43 @@ export async function initDB() {
         teacher_name TEXT
       )
     `);
+
+    const defaultSubjects = [
+      { id: '1',  name: 'MATHEMATIQUES',              coefficient: 1,  teacher: 'ANDRIANIRINA N. Micah' },
+      { id: '2',  name: 'TECHNOLOGIE',                coefficient: 1,  teacher: 'ANDRIANIRINA N. Micah' },
+      { id: '3',  name: 'PHYSIQUE CHIMIE',             coefficient: 1,  teacher: 'ANDRIANIRINA N. Micah' },
+      { id: '4',  name: 'HISTOIRE GEOGRAPHIE/ E.M.C', coefficient: 1,  teacher: 'TAMARENA Hermann' },
+      { id: '5',  name: 'ANGLAIS',                    coefficient: 1,  teacher: "RAVELOMANANTSOA Mioran'i Avo" },
+      { id: '6',  name: 'ARTS PLASTIQUES',            coefficient: 1,  teacher: 'RAZAFINIMANANA Solofotiana' },
+      { id: '7',  name: 'EPS',                        coefficient: 1,  teacher: 'ANDRIAMANORO Tahiry' },
+      { id: '8',  name: 'EDUCATION MUSICALE',         coefficient: 1,  teacher: 'ANDRIAMANORO Tahiry' },
+      { id: '9',  name: 'ESPAGNOL',                   coefficient: 1,  teacher: 'RABEARIVELO Avotra H.' },
+      { id: '10', name: 'FRANCAIS',                   coefficient: 1,  teacher: 'RASOLOFOMANANA Lalasoa' },
+      { id: '11', name: 'SVT',                        coefficient: 1,  teacher: 'RAZAFIMIHAJA Saholy' },
+      { id: '12', name: 'MALAGASY',                   coefficient: 1,  teacher: 'RANOMENJANAHARY Fameno Lafatriniaina' },
+    ];
+
     const { rows: existingSubjects } = await client.query('SELECT id FROM subjects LIMIT 1');
     if (existingSubjects.length === 0) {
-      const defaultSubjects = [
-        { id: '1',  name: 'MATHEMATIQUES',              coefficient: 1 },
-        { id: '2',  name: 'TECHNOLOGIE',                coefficient: 1 },
-        { id: '3',  name: 'PHYSIQUE CHIMIE',             coefficient: 1 },
-        { id: '4',  name: 'HISTOIRE GEOGRAPHIE/ E.M.C', coefficient: 1 },
-        { id: '5',  name: 'ANGLAIS',                    coefficient: 1 },
-        { id: '6',  name: 'ARTS PLASTIQUES',            coefficient: 1 },
-        { id: '7',  name: 'EPS',                        coefficient: 1 },
-        { id: '8',  name: 'EDUCATION MUSICALE',         coefficient: 1 },
-        { id: '9',  name: 'ESPAGNOL',                   coefficient: 1 },
-        { id: '10', name: 'FRANCAIS',                   coefficient: 1 },
-        { id: '11', name: 'SVT',                        coefficient: 1 },
-        { id: '12', name: 'MALAGASY',                   coefficient: 1 },
-      ];
+      // Première installation : insérer avec les noms de professeurs
       for (const s of defaultSubjects) {
         await client.query(
-          `INSERT INTO subjects (id, name, coefficient) VALUES ($1, $2, $3) ON CONFLICT (id) DO NOTHING`,
-          [s.id, s.name, s.coefficient]
+          `INSERT INTO subjects (id, name, coefficient, teacher_name)
+           VALUES ($1, $2, $3, $4) ON CONFLICT (id) DO NOTHING`,
+          [s.id, s.name, s.coefficient, s.teacher]
         );
       }
-      console.log('Matières par défaut insérées (coefficient 1).');
+      console.log('Matières par défaut insérées avec professeurs.');
+    } else {
+      // Base existante : remplir les teacher_name manquants uniquement
+      for (const s of defaultSubjects) {
+        await client.query(
+          `UPDATE subjects SET teacher_name = $1
+           WHERE id = $2 AND (teacher_name IS NULL OR teacher_name = '')`,
+          [s.teacher, s.id]
+        );
+      }
+      console.log('Noms de professeurs mis à jour pour les matières existantes.');
     }
 
     // 4. Insérer les templates de documents par défaut si absents
