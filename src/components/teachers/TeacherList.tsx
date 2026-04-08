@@ -187,15 +187,6 @@ export function TeacherList() {
     e.stopPropagation();
     const trimmedTeacher = editTeacherName.trim();
 
-    // Vérification doublon de professeur : même enseignant déjà assigné à une autre matière ?
-    const teacherDuplicate = trimmedTeacher
-      ? subjects.find(s => s.id !== subject.id && s.teacherName?.trim().toLowerCase() === trimmedTeacher.toLowerCase())
-      : null;
-    if (teacherDuplicate) {
-      showToast(`"${trimmedTeacher}" est déjà assigné à "${teacherDuplicate.name}".`, 'error');
-      return;
-    }
-
     try {
       await subjectsApi.update(subject.id, {
         name: subject.name,
