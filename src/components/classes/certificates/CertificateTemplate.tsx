@@ -96,7 +96,7 @@ export function CertificateTemplate({ type, student }: CertificateTemplateProps)
               <img
                 src="/assets/signature-directrice.png"
                 alt="Signature"
-                style={{ height: '50px', marginLeft: 'auto', display: 'block', marginTop: '4px' }}
+                style={{ height: '50px', marginLeft: 'auto', marginRight: '2cm', display: 'block', marginTop: '4px' }}
               />
               <p className="text-[12px] font-semibold font-tahoma">RAMANANIRAINY Norotahiana</p>
             </div>
