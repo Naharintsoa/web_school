@@ -24,10 +24,17 @@ function toExamSubject(s: Subject) {
   return { id: s.id, name: s.name, teacherId: '', coefficient: s.coefficient };
 }
 
+const ALL_GRADES = ['CP','CE1','CE2','CM1','CM2','6EME','5EME','4EME','3EME'];
+
+function gradeLabel(grade: string | null | undefined): string {
+  if (!grade) return 'Toutes classes';
+  return grade.replace('EME', 'ème');
+}
+
 // ─── Formulaire d'ajout (ligne en bas du tableau) ─────────────────────────────
 
 interface AddRowProps {
-  onAdd: (name: string, coeff: number, teacher: string) => void;
+  onAdd: (name: string, coeff: number, teacher: string, grade: string | null) => void;
   onCancel: () => void;
 }
 
@@ -35,10 +42,11 @@ function AddRow({ onAdd, onCancel }: AddRowProps) {
   const [name, setName] = useState('');
   const [coeff, setCoeff] = useState(1);
   const [teacher, setTeacher] = useState('');
+  const [grade, setGrade] = useState('');
 
   const submit = () => {
     if (!name.trim()) return;
-    onAdd(name.trim().toUpperCase(), Math.max(1, Math.min(10, coeff)), teacher.trim());
+    onAdd(name.trim().toUpperCase(), Math.max(1, Math.min(10, coeff)), teacher.trim(), grade || null);
   };
 
   return (
@@ -47,20 +55,17 @@ function AddRow({ onAdd, onCancel }: AddRowProps) {
       {/* Nom matière */}
       <td className="px-4 py-3">
         <input
-          autoFocus
-          type="text"
-          value={name}
+          autoFocus type="text" value={name}
           onChange={e => setName(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter') submit(); if (e.key === 'Escape') onCancel(); }}
           placeholder="Ex : MATHÉMATIQUES"
-          className="border border-indigo-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-indigo-500 w-48 uppercase"
+          className="border border-indigo-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-indigo-500 w-44 uppercase"
         />
       </td>
       {/* Coefficient */}
       <td className="px-4 py-3">
         <input
-          type="number" min="1" max="10"
-          value={coeff}
+          type="number" min="1" max="10" value={coeff}
           onChange={e => setCoeff(Number(e.target.value))}
           className="border border-indigo-300 rounded-lg px-2 py-1.5 text-sm text-center focus:ring-2 focus:ring-indigo-500 w-20"
         />
@@ -68,30 +73,33 @@ function AddRow({ onAdd, onCancel }: AddRowProps) {
       {/* Professeur */}
       <td className="px-4 py-3">
         <input
-          type="text"
-          value={teacher}
+          type="text" value={teacher}
           onChange={e => setTeacher(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter') submit(); if (e.key === 'Escape') onCancel(); }}
           placeholder="Nom du professeur"
-          className="border border-indigo-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-indigo-500 w-48"
+          className="border border-indigo-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-indigo-500 w-44"
         />
+      </td>
+      {/* Classe spécifique */}
+      <td className="px-4 py-3">
+        <select
+          value={grade}
+          onChange={e => setGrade(e.target.value)}
+          className="border border-indigo-300 rounded-lg px-2 py-1.5 text-sm focus:ring-2 focus:ring-indigo-500 w-36"
+        >
+          <option value="">Toutes classes</option>
+          {ALL_GRADES.map(g => <option key={g} value={g}>{gradeLabel(g)}</option>)}
+        </select>
       </td>
       {/* Actions */}
       <td className="px-4 py-3">
         <div className="flex items-center gap-1">
-          <button
-            onClick={submit}
-            disabled={!name.trim()}
-            className="p-1.5 text-white bg-indigo-600 hover:bg-indigo-700 rounded-md disabled:opacity-40"
-            title="Ajouter"
-          >
+          <button onClick={submit} disabled={!name.trim()}
+            className="p-1.5 text-white bg-indigo-600 hover:bg-indigo-700 rounded-md disabled:opacity-40" title="Ajouter">
             <Save size={14} />
           </button>
-          <button
-            onClick={onCancel}
-            className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-md"
-            title="Annuler"
-          >
+          <button onClick={onCancel}
+            className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-md" title="Annuler">
             <X size={14} />
           </button>
         </div>
@@ -114,6 +122,7 @@ export function TeacherList() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTeacherName, setEditTeacherName] = useState('');
   const [editCoeff, setEditCoeff] = useState(1);
+  const [editGrade, setEditGrade] = useState<string>('');
 
   const loadSubjects = useCallback(async () => {
     const data = await subjectsApi.getAll(currentSchool);
@@ -136,18 +145,22 @@ export function TeacherList() {
 
   // ── Ajout ─────────────────────────────────────────────────────────────────
 
-  const handleAdd = async (name: string, coeff: number, teacher: string) => {
+  const handleAdd = async (name: string, coeff: number, teacher: string, grade: string | null) => {
     const normalized = name.trim().toUpperCase();
 
-    // Vérification doublon côté client (avant l'appel réseau)
-    const duplicate = subjects.find(s => s.name.toUpperCase() === normalized);
+    // Vérification doublon côté client
+    const duplicate = subjects.find(s =>
+      s.name.toUpperCase() === normalized &&
+      (s.grade ?? null) === grade
+    );
     if (duplicate) {
-      showToast(`La matière "${normalized}" existe déjà.`, 'error');
+      const scope = grade ? `pour la classe ${gradeLabel(grade)}` : 'pour toutes les classes';
+      showToast(`La matière "${normalized}" existe déjà ${scope}.`, 'error');
       return;
     }
 
     try {
-      await subjectsApi.create({ name: normalized, coefficient: coeff, teacherName: teacher, school: currentSchool });
+      await subjectsApi.create({ name: normalized, coefficient: coeff, teacherName: teacher, school: currentSchool, grade });
       setShowAddRow(false);
       showToast(`Matière "${normalized}" ajoutée`, 'success');
     } catch (err: any) {
@@ -162,6 +175,7 @@ export function TeacherList() {
     setEditingId(subject.id);
     setEditTeacherName(subject.teacherName ?? '');
     setEditCoeff(subject.coefficient);
+    setEditGrade(subject.grade ?? '');
   };
 
   const cancelEdit = (e: React.MouseEvent) => {
@@ -187,6 +201,7 @@ export function TeacherList() {
         name: subject.name,
         coefficient: Math.max(1, Math.min(10, editCoeff)),
         teacherName: trimmedTeacher,
+        grade: editGrade || null,
       });
       setEditingId(null);
       showToast(`"${subject.name}" mis à jour`, 'success');
@@ -279,13 +294,14 @@ export function TeacherList() {
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Matière</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-28">Coefficient</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{FR.teachers.teacher}</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-36">Classes</th>
                 <th className="px-6 py-3 w-24" />
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-100">
               {subjects.length === 0 && !showAddRow && (
                 <tr>
-                  <td colSpan={5} className="px-6 py-16 text-center text-gray-400">
+                  <td colSpan={6} className="px-6 py-16 text-center text-gray-400">
                     <BookOpen size={40} className="mx-auto mb-3 opacity-30" />
                     <p>Aucune matière. Cliquez sur <strong>Nouvelle matière</strong> pour commencer.</p>
                   </td>
@@ -351,6 +367,24 @@ export function TeacherList() {
                     )}
                   </td>
 
+                  {/* Classes — éditable */}
+                  <td className="px-6 py-4" onClick={e => e.stopPropagation()}>
+                    {editingId === subject.id ? (
+                      <select
+                        value={editGrade}
+                        onChange={e => setEditGrade(e.target.value)}
+                        className="border border-indigo-300 rounded-lg px-2 py-1.5 text-sm focus:ring-2 focus:ring-indigo-500 w-36"
+                      >
+                        <option value="">Toutes classes</option>
+                        {ALL_GRADES.map(g => <option key={g} value={g}>{gradeLabel(g)}</option>)}
+                      </select>
+                    ) : (
+                      <span className={`text-sm ${subject.grade ? 'text-indigo-700 font-medium' : 'text-gray-400 italic'}`}>
+                        {gradeLabel(subject.grade)}
+                      </span>
+                    )}
+                  </td>
+
                   {/* Actions */}
                   <td className="px-4 py-4" onClick={e => e.stopPropagation()}>
                     {editingId === subject.id ? (
@@ -405,7 +439,7 @@ export function TeacherList() {
             {!showAddRow && (
               <tfoot>
                 <tr>
-                  <td colSpan={5} className="px-6 py-3 border-t border-gray-100">
+                  <td colSpan={6} className="px-6 py-3 border-t border-gray-100">
                     <button
                       onClick={() => { setShowAddRow(true); setEditingId(null); }}
                       className="flex items-center gap-2 text-sm text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 px-3 py-1.5 rounded-lg transition-colors"
