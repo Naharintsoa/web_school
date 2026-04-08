@@ -9,6 +9,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { pool } from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
+import { sendLoginNotification } from '../services/mailer.js';
 
 const router = Router();
 
@@ -68,6 +69,17 @@ router.post('/login', async (req, res) => {
       sameSite: 'strict',
       secure: process.env.NODE_ENV === 'production',
       // Pas de maxAge → session cookie (expire à la fermeture du navigateur)
+    });
+
+    // Notification e-mail (non-bloquante — fire & forget)
+    const clientIp = req.headers['x-forwarded-for']?.split(',')[0]?.trim()
+      || req.socket?.remoteAddress
+      || 'inconnue';
+    sendLoginNotification({
+      fullName: user.full_name,
+      username: user.username,
+      roleLabel: user.role_label,
+      ip: clientIp,
     });
 
     return res.json(session);
