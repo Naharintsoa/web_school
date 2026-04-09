@@ -499,11 +499,6 @@ export function CouncilDiapo({
             <span>Préc.</span>
           </button>
 
-          {/* Compteur — pill flottant bas centre */}
-          <div className="diapo-navcnt" style={tw.navCounter}>
-            {idx + 1}&nbsp;/&nbsp;{slides.length}
-          </div>
-
           {/* Bouton Suivant — flottant droite */}
           <button
             className="diapo-nav-next"
@@ -517,12 +512,6 @@ export function CouncilDiapo({
         </>
       )}
 
-      {/* Compteur seul en mode lecture (readOnly) */}
-      {readOnly && (
-        <div className="diapo-navcnt" style={tw.navCounter}>
-          {idx + 1}&nbsp;/&nbsp;{slides.length}
-        </div>
-      )}
     </div>
   );
 }
