@@ -14,21 +14,54 @@ router.use(requireAuth);
 
 function rowToSubject(row) {
   return {
-    id: row.id,
-    name: row.name,
+    id:          row.id,
+    name:        row.name,
     coefficient: Number(row.coefficient),
     teacherName: row.teacher_name ?? '',
-    school: row.school ?? 'sully',
+    school:      row.school ?? 'sully',
+    grade:       row.grade ?? null,
   };
 }
 
-// GET /api/subjects?school=sully
+/**
+ * GET /api/subjects?school=sully[&grade=3EME]
+ *
+ * Sans ?grade : retourne toutes les matières de l'école (vue Professeurs).
+ *
+ * Avec ?grade=3EME : retourne UNE ligne par matière (nom normalisé),
+ *   en préférant l'entrée spécifique à cette classe (grade='3EME')
+ *   sur l'entrée générique (grade IS NULL).
+ *   → Garantit le bon professeur par classe sur les bulletins.
+ */
 router.get('/', async (req, res) => {
   try {
-    const { school } = req.query;
+    const { school, grade } = req.query;
+
+    if (grade) {
+      // Résolution prof par classe :
+      // DISTINCT ON (nom normalisé) + ORDER BY classe spécifique en premier
+      const { rows } = await pool.query(
+        `SELECT DISTINCT ON (UPPER(TRIM(name)))
+                id, name, coefficient, teacher_name, school, grade
+         FROM   subjects
+         WHERE  school = $1
+           AND  (grade IS NULL OR grade = $2)
+         ORDER  BY UPPER(TRIM(name)),
+                   (grade IS NOT NULL) DESC`,   -- classe spécifique avant générique
+        [school ?? 'sully', grade]
+      );
+      return res.json(rows.map(rowToSubject));
+    }
+
+    // Vue globale (gestion des professeurs)
     const { rows } = school
-      ? await pool.query('SELECT * FROM subjects WHERE school = $1 ORDER BY name', [school])
-      : await pool.query('SELECT * FROM subjects ORDER BY name');
+      ? await pool.query(
+          'SELECT * FROM subjects WHERE school = $1 ORDER BY name, COALESCE(grade,\'\')',
+          [school]
+        )
+      : await pool.query(
+          'SELECT * FROM subjects ORDER BY name, COALESCE(grade,\'\')'
+        );
     return res.json(rows.map(rowToSubject));
   } catch (err) {
     console.error('Erreur récupération matières:', err);

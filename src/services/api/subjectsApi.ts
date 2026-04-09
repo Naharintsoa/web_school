@@ -19,9 +19,18 @@ function subscribe(fn: Listener): () => void {
 }
 
 export const subjectsApi = {
-  getAll: async (school?: string): Promise<Subject[]> => {
-    const url = school ? `/subjects?school=${encodeURIComponent(school)}` : '/subjects';
-    return apiFetch<Subject[]>(url);
+  /**
+   * Récupère les matières.
+   * @param school  Établissement ('sully' | 'sully-annexe')
+   * @param grade   Classe (ex: '3EME'). Quand fourni, retourne UNE ligne par matière
+   *                avec le professeur spécifique à cette classe (ou le fallback générique).
+   */
+  getAll: async (school?: string, grade?: string): Promise<Subject[]> => {
+    const params = new URLSearchParams();
+    if (school) params.set('school', school);
+    if (grade)  params.set('grade',  grade);
+    const qs = params.toString();
+    return apiFetch<Subject[]>(qs ? `/subjects?${qs}` : '/subjects');
   },
 
   create: async (subject: Omit<Subject, 'id'>): Promise<Subject> => {

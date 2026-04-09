@@ -61,22 +61,24 @@ export function ClassGradesList({ grade, onBack }: ClassGradesListProps) {
   // S'abonner aux modifications de matières
   useEffect(() => {
     const unsubscribe = subjectsApi.subscribe(() => {
-      subjectsApi.getAll(currentSchool).then(setSubjects);
+      // Passer la classe : récupère le bon prof par classe
+      subjectsApi.getAll(currentSchool, grade).then(setSubjects);
     });
     return unsubscribe;
-  }, [currentSchool]);
+  }, [currentSchool, grade]);
 
   const loadData = useCallback(async () => {
     const [loadedStudents, loadedSubjects] = await Promise.all([
       studentApi.getAll(currentYear, currentSchool),
-      subjectsApi.getAll(currentSchool),
+      // ?grade=3EME → backend retourne UNE ligne par matière avec le bon prof
+      subjectsApi.getAll(currentSchool, grade),
     ]);
     setStudents(loadedStudents.filter(s => s.grade === grade));
     setSubjects(loadedSubjects);
   }, [grade, currentYear, currentSchool]);
 
   const handleSubjectsChange = async () => {
-    const updated = await subjectsApi.getAll(currentSchool);
+    const updated = await subjectsApi.getAll(currentSchool, grade);
     setSubjects(updated);
   };
 
