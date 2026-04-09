@@ -76,6 +76,17 @@ CREATE TABLE IF NOT EXISTS settings (
   value TEXT NOT NULL
 );
 
+-- ─── Subjects ─────────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS subjects (
+  id            TEXT PRIMARY KEY,
+  name          TEXT NOT NULL,
+  coefficient   INTEGER NOT NULL DEFAULT 1,
+  teacher_name  TEXT,
+  school        TEXT NOT NULL DEFAULT 'sully',
+  grade         TEXT,
+  display_order INTEGER DEFAULT 9999
+);
+
 -- ─── Document Templates ───────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS document_templates (
   id          TEXT PRIMARY KEY,
