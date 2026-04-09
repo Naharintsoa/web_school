@@ -130,10 +130,32 @@ export async function initDB() {
       )
     `);
 
-    // Contrainte unicité matières : (nom normalisé, école) — idempotent
+    // Colonne grade sur subjects (NULL = toutes classes, ex: '3EME' = spécifique)
+    await client.query(`ALTER TABLE subjects ADD COLUMN IF NOT EXISTS grade TEXT`);
+
+    // Supprimer l'ancien index unique (sans grade) s'il existe
+    await client.query(`DROP INDEX IF EXISTS idx_subjects_unique_name_school`);
+
+    // Supprimer les doublons avant de créer le nouvel index
     await client.query(`
-      CREATE UNIQUE INDEX IF NOT EXISTS idx_subjects_unique_name_school
-      ON subjects (UPPER(TRIM(name)), school)
+      DELETE FROM subjects
+      WHERE id IN (
+        SELECT id FROM (
+          SELECT id,
+            ROW_NUMBER() OVER (
+              PARTITION BY UPPER(TRIM(name)), school, COALESCE(grade, '')
+              ORDER BY id DESC
+            ) AS rn
+          FROM subjects
+        ) ranked
+        WHERE rn > 1
+      )
+    `);
+
+    // Contrainte unicité matières : (nom normalisé, école, classe) — idempotent
+    await client.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_subjects_unique_name_school_grade
+      ON subjects (UPPER(TRIM(name)), school, COALESCE(grade, ''))
     `);
 
     // 2. Insérer les rôles par défaut si la table est vide
@@ -197,7 +219,7 @@ export async function initDB() {
       { id: 'sully-7',  name: 'EPS',                        coefficient: 1,  teacher: 'ANDRIAMANORO Tahiry' },
       { id: 'sully-8',  name: 'EDUCATION MUSICALE',         coefficient: 1,  teacher: 'ANDRIAMANORO Tahiry' },
       { id: 'sully-9',  name: 'ESPAGNOL',                   coefficient: 1,  teacher: 'RABEARIVELO Avotra H.' },
-      { id: 'sully-10', name: 'FRANCAIS',                   coefficient: 1,  teacher: 'RASOLOFOMANANA Lalasoa' },
+      // FRANCAIS géré séparément par classe ci-dessous
       { id: 'sully-11', name: 'SVT',                        coefficient: 1,  teacher: 'RAZAFIMIHAJA Saholy' },
       { id: 'sully-12', name: 'MALAGASY',                   coefficient: 1,  teacher: 'RANOMENJANAHARY Fameno Lafatriniaina' },
     ];
@@ -249,6 +271,38 @@ export async function initDB() {
         `UPDATE subjects SET school = 'sully', teacher_name = COALESCE(NULLIF(teacher_name,''), $1)
          WHERE id = $2`,
         [teacher, id]
+      );
+    }
+
+    // ─── FRANÇAIS Sully : un prof par classe de collège ──────────────────────
+    // Supprimer les anciennes entrées FRANÇAIS/sully (génériques ou doublons)
+    // sauf celles qu'on va créer/mettre à jour
+    const francaisSullyIds = [
+      'sully-francais-3eme',
+      'sully-francais-6eme',
+      'sully-francais-5eme',
+      'sully-francais-4eme',
+    ];
+    await client.query(
+      `DELETE FROM subjects
+       WHERE UPPER(TRIM(name)) = 'FRANCAIS' AND school = 'sully' AND id != ALL($1)`,
+      [francaisSullyIds]
+    );
+
+    const francaisSully = [
+      { id: 'sully-francais-3eme', grade: '3EME', teacher: 'RASOLOFOMANANA Lalasoa' },
+      { id: 'sully-francais-6eme', grade: '6EME', teacher: 'ZO LALAINA Rindratiana' },
+      { id: 'sully-francais-5eme', grade: '5EME', teacher: 'ZO LALAINA Rindratiana' },
+      { id: 'sully-francais-4eme', grade: '4EME', teacher: 'ZO LALAINA Rindratiana' },
+    ];
+    for (const { id, grade, teacher } of francaisSully) {
+      await client.query(
+        `INSERT INTO subjects (id, name, coefficient, teacher_name, school, grade)
+         VALUES ($1, 'FRANCAIS', 1, $2, 'sully', $3)
+         ON CONFLICT (id) DO UPDATE
+           SET teacher_name = EXCLUDED.teacher_name,
+               grade        = EXCLUDED.grade`,
+        [id, teacher, grade]
       );
     }
 
