@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   GraduationCap, ChevronRight, Edit2, Save, X,
-  BookOpen, Plus, Trash2,
+  BookOpen, Plus, Trash2, ArrowUp, ArrowDown,
 } from 'lucide-react';
 import { subjectsApi } from '../../services/api/subjectsApi';
 import { SubjectExams } from '../subjects/SubjectExams';
@@ -282,6 +282,25 @@ export function TeacherList() {
     }
   };
 
+  // ── Réordonnancement ──────────────────────────────────────────────────────
+
+  const handleMoveSubject = async (index: number, direction: 'up' | 'down', e: React.MouseEvent) => {
+    e.stopPropagation();
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= subjects.length) return;
+
+    const newSubjects = [...subjects];
+    [newSubjects[index], newSubjects[targetIndex]] = [newSubjects[targetIndex], newSubjects[index]];
+    setSubjects(newSubjects);
+
+    try {
+      await subjectsApi.reorder(newSubjects.map(s => s.id));
+    } catch {
+      setSubjects(subjects);
+      showToast('Erreur lors du réordonnancement.', 'error');
+    }
+  };
+
   // ── Suppression ───────────────────────────────────────────────────────────
 
   const handleDelete = async (subject: Subject, e: React.MouseEvent) => {
@@ -368,7 +387,7 @@ export function TeacherList() {
                   Classes collège
                   <span className="ml-1 text-gray-400 font-normal normal-case">(6ème→3ème)</span>
                 </th>
-                <th className="px-6 py-3 w-24" />
+                <th className="px-6 py-3 w-32" />
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-100">
@@ -460,6 +479,16 @@ export function TeacherList() {
                       </div>
                     ) : (
                       <div className="flex items-center gap-1">
+                        <button onClick={e => handleMoveSubject(index, 'up', e)}
+                          disabled={index === 0}
+                          className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-md disabled:opacity-25 disabled:cursor-not-allowed" title="Monter">
+                          <ArrowUp size={14} />
+                        </button>
+                        <button onClick={e => handleMoveSubject(index, 'down', e)}
+                          disabled={index === subjects.length - 1}
+                          className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-md disabled:opacity-25 disabled:cursor-not-allowed" title="Descendre">
+                          <ArrowDown size={14} />
+                        </button>
                         <button onClick={e => startEdit(subject, e)}
                           className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-md" title="Modifier">
                           <Edit2 size={15} />

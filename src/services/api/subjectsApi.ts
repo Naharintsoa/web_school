@@ -56,5 +56,17 @@ export const subjectsApi = {
     notify();
   },
 
+  /**
+   * Sauvegarde l'ordre d'affichage des matières dans le bulletin.
+   * @param ids tableau des IDs dans l'ordre souhaité (index 0 = 1ère ligne)
+   */
+  reorder: async (ids: string[]): Promise<void> => {
+    await apiFetch<void>('/subjects/reorder', {
+      method: 'PATCH',
+      body: JSON.stringify({ ids }),
+    });
+    notify();
+  },
+
   subscribe,
 };

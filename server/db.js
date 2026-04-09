@@ -158,6 +158,21 @@ export async function initDB() {
       ON subjects (UPPER(TRIM(name)), school, COALESCE(grade, ''))
     `);
 
+    // Colonne display_order : ordre d'affichage dans le bulletin
+    await client.query(`ALTER TABLE subjects ADD COLUMN IF NOT EXISTS display_order INTEGER DEFAULT 9999`);
+    // Initialiser display_order pour les lignes existantes (ordre alpha par défaut)
+    await client.query(`
+      UPDATE subjects s
+      SET    display_order = ranked.rn
+      FROM   (
+        SELECT id,
+               ROW_NUMBER() OVER (PARTITION BY school ORDER BY UPPER(TRIM(name))) AS rn
+        FROM   subjects
+        WHERE  display_order = 9999 OR display_order IS NULL
+      ) ranked
+      WHERE  s.id = ranked.id
+    `);
+
     // 2. Insérer les rôles par défaut si la table est vide
     const { rows: existingRoles } = await client.query('SELECT id FROM roles LIMIT 1');
     if (existingRoles.length === 0) {

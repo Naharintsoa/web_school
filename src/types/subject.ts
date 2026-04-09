@@ -16,4 +16,6 @@ export interface Subject {
    * Quand null, cette entrée sert de fallback si aucune entrée spécifique n'existe.
    */
   grade?: string | null;
+  /** Position dans le bulletin (1 = première ligne) */
+  displayOrder?: number;
 }
