@@ -58,9 +58,9 @@ const S = {
 
 // ─── Composant principal ──────────────────────────────────────────────────────
 
-// Matières langues étrangères : si pas de note → ne pas afficher sur le bulletin
-const LANG_KEYWORDS = ['anglais', 'espagnol', 'allemand'];
-const isLang = (name: string) => LANG_KEYWORDS.some(k => name.toLowerCase().includes(k));
+// Matières optionnelles : si pas de note → ne pas afficher sur le bulletin
+const OPTIONAL_KEYWORDS = ['anglais', 'espagnol', 'allemand', 'litter'];
+const isOptional = (name: string) => OPTIONAL_KEYWORDS.some(k => name.toLowerCase().includes(k));
 
 export function ReportCard({
   student, grades, allGrades: _allGrades, subjects, classStats,
@@ -84,7 +84,7 @@ export function ReportCard({
   // - Langues (anglais/espagnol/allemand) : uniquement si une note existe
   // - Toutes les autres matières : toujours affichées
   const displayRows = subjects
-    .filter(s => isLang(s.name) ? grades.some(g => g.subjectId === s.id) : true)
+    .filter(s => isOptional(s.name) ? grades.some(g => g.subjectId === s.id) : true)
     .map(s => ({ subject: s, grade: grades.find(g => g.subjectId === s.id) ?? null }));
 
   // La moyenne ne compte que les matières effectivement notées
