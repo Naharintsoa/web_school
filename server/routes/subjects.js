@@ -47,7 +47,7 @@ router.get('/', async (req, res) => {
          WHERE  school = $1
            AND  (grade IS NULL OR grade = $2)
          ORDER  BY UPPER(TRIM(name)),
-                   (grade IS NOT NULL) DESC`,   -- classe spécifique avant générique
+                   (grade IS NOT NULL) DESC`,
         [school ?? 'sully', grade]
       );
       return res.json(rows.map(rowToSubject));
