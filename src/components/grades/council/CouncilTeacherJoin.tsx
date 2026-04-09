@@ -1,10 +1,7 @@
 /**
  * CouncilTeacherJoin — vue mobile pour les professeurs.
  * Accessible via /conseil/:sessionId sans authentification.
- *
- * Étapes :
- *  1. Saisir son nom + rôle → rejoindre la session
- *  2. Voir l'élève courant + ajouter des remarques en temps réel
+ * Rejoindre automatiquement à l'ouverture du lien.
  */
 import { useEffect, useState, useRef } from 'react';
 import { useParams } from 'react-router-dom';
@@ -12,37 +9,41 @@ import { getSocket, disconnectSocket } from '../../../services/councilSocket';
 import type { CouncilSession } from '../../../services/councilSocket';
 import { MessageSquare, Send, Users, Wifi, WifiOff } from 'lucide-react';
 
-const ROLES = ['Professeur', 'Professeur principal', 'Directeur', 'Surveillant', 'Autre'];
-
 export function CouncilTeacherJoin() {
   const { sessionId } = useParams<{ sessionId: string }>();
-  const [step, setStep]         = useState<'form' | 'session' | 'closed'>('form');
-  const [name, setName]         = useState('');
-  const [role, setRole]         = useState('Professeur');
-  const [session, setSession]   = useState<CouncilSession | null>(null);
-  const [error, setError]       = useState('');
+  const [session, setSession] = useState<CouncilSession | null>(null);
+  const [closed, setClosed]   = useState(false);
+  const [error, setError]     = useState('');
   const [connected, setConnected] = useState(false);
-  const [remark, setRemark]     = useState('');
-  const [sending, setSending]   = useState(false);
+  const [remark, setRemark]   = useState('');
   const bottomRef = useRef<HTMLDivElement>(null);
 
+  // Connexion et rejoindre automatiquement sans formulaire
   useEffect(() => {
     const socket = getSocket();
-    socket.on('connect',    () => setConnected(true));
+
+    const join = () => {
+      setConnected(true);
+      socket.emit('join-council', { sessionId, name: 'Participant', role: 'Professeur' });
+    };
+
+    if (socket.connected) {
+      join();
+    } else {
+      socket.on('connect', join);
+    }
+
     socket.on('disconnect', () => setConnected(false));
-    if (socket.connected) setConnected(true);
 
     socket.on('council-state', (s: CouncilSession) => {
       setSession(s);
-      if (s.phase === 'closed') setStep('closed');
-      else if (step === 'form') {} // still on form
-      else setStep('session');
+      if (s.phase === 'closed') setClosed(true);
     });
 
     socket.on('council-error', (msg: string) => setError(msg));
 
     return () => {
-      socket.off('connect');
+      socket.off('connect', join);
       socket.off('disconnect');
       socket.off('council-state');
       socket.off('council-error');
@@ -56,97 +57,49 @@ export function CouncilTeacherJoin() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [session?.remarks]);
 
-  const handleJoin = () => {
-    if (!name.trim()) { setError('Veuillez saisir votre nom.'); return; }
-    setError('');
-    const socket = getSocket();
-    socket.emit('join-council', { sessionId, name: name.trim(), role });
-    setStep('session');
-  };
-
   const handleSendRemark = () => {
     const text = remark.trim();
-    if (!text || !session) return;
-    setSending(true);
-    getSocket().emit('add-remark', {
-      sessionId,
-      studentId: currentStudent?.id,
-      text,
-    });
+    if (!text || !currentStudent) return;
+    getSocket().emit('add-remark', { sessionId, studentId: currentStudent.id, text });
     setRemark('');
-    setSending(false);
   };
 
   const currentStudent = session ? session.students[session.currentStudentIndex] : null;
   const currentRemarks = currentStudent ? (session?.remarks[currentStudent.id] ?? []) : [];
 
-  // ── Styles communs ─────────────────────────────────────────────────────────
-  const pageClass = 'min-h-screen bg-slate-900 text-white flex flex-col';
-
   // ── Session clôturée ──────────────────────────────────────────────────────
-  if (step === 'closed') {
+  if (closed) {
     return (
-      <div className={`${pageClass} items-center justify-center text-center p-6`}>
-        <div className="text-5xl mb-4">🏁</div>
-        <h2 className="text-xl font-bold mb-2">Session terminée</h2>
-        <p className="text-slate-400 text-sm">Le conseil de classe est clôturé. Merci pour votre participation.</p>
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center text-white text-center p-6">
+        <div>
+          <div className="text-5xl mb-4">🏁</div>
+          <h2 className="text-xl font-bold mb-2">Session terminée</h2>
+          <p className="text-slate-400 text-sm">Le conseil de classe est clôturé. Merci.</p>
+        </div>
       </div>
     );
   }
 
-  // ── Formulaire d'entrée ───────────────────────────────────────────────────
-  if (step === 'form') {
+  // ── Erreur (session introuvable, etc.) ────────────────────────────────────
+  if (error) {
     return (
-      <div className={`${pageClass} items-center justify-center p-6`}>
-        <div className="w-full max-w-sm space-y-6">
-          <div className="text-center">
-            <div className="text-4xl mb-3">🏫</div>
-            <h1 className="text-2xl font-bold">Conseil de classe</h1>
-            <p className="text-slate-400 text-sm mt-1">Rejoindre la session en cours</p>
-            <div className={`flex items-center justify-center gap-1.5 mt-2 text-xs ${connected ? 'text-emerald-400' : 'text-red-400'}`}>
-              {connected ? <Wifi size={12} /> : <WifiOff size={12} />}
-              {connected ? 'Connecté' : 'Connexion…'}
-            </div>
-          </div>
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center text-white text-center p-6">
+        <div>
+          <div className="text-5xl mb-4">⚠️</div>
+          <h2 className="text-xl font-bold mb-2">Impossible de rejoindre</h2>
+          <p className="text-red-400 text-sm">{error}</p>
+        </div>
+      </div>
+    );
+  }
 
-          {error && (
-            <div className="bg-red-900/50 border border-red-700 text-red-300 text-sm px-4 py-3 rounded-xl">
-              {error}
-            </div>
-          )}
-
-          <div className="space-y-4">
-            <div>
-              <label className="block text-xs text-slate-400 font-medium mb-1.5">Votre nom</label>
-              <input
-                type="text"
-                value={name}
-                onChange={e => setName(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleJoin()}
-                placeholder="Ex : RAZAFY Jean"
-                autoFocus
-                className="w-full bg-slate-800 border border-slate-600 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-slate-500"
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-slate-400 font-medium mb-1.5">Rôle</label>
-              <select
-                value={role}
-                onChange={e => setRole(e.target.value)}
-                className="w-full bg-slate-800 border border-slate-600 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              >
-                {ROLES.map(r => <option key={r}>{r}</option>)}
-              </select>
-            </div>
-          </div>
-
-          <button
-            onClick={handleJoin}
-            disabled={!connected}
-            className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-sm disabled:opacity-50"
-          >
-            Rejoindre le conseil
-          </button>
+  // ── Chargement / en attente de connexion ──────────────────────────────────
+  if (!session) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center text-white">
+        <div className="text-center">
+          <div className="w-10 h-10 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-slate-400 text-sm">Connexion au conseil en cours…</p>
         </div>
       </div>
     );
@@ -154,11 +107,12 @@ export function CouncilTeacherJoin() {
 
   // ── Vue session ───────────────────────────────────────────────────────────
   return (
-    <div className={pageClass}>
+    <div className="min-h-screen bg-slate-900 text-white flex flex-col">
+
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 bg-slate-800 border-b border-slate-700 flex-shrink-0">
         <div>
-          <p className="font-semibold text-sm">{session?.grade} — T{session?.term}</p>
+          <p className="font-semibold text-sm">{session.grade} — Trimestre {session.term}</p>
           <div className={`flex items-center gap-1 text-xs ${connected ? 'text-emerald-400' : 'text-red-400'}`}>
             {connected ? <Wifi size={10} /> : <WifiOff size={10} />}
             {connected ? 'En direct' : 'Reconnexion…'}
@@ -166,7 +120,7 @@ export function CouncilTeacherJoin() {
         </div>
         <div className="flex items-center gap-1.5 text-xs text-slate-400">
           <Users size={13} />
-          {session?.participants.length ?? 0} participant{(session?.participants.length ?? 0) > 1 ? 's' : ''}
+          {session.participants.length} participant{session.participants.length > 1 ? 's' : ''}
         </div>
       </div>
 
@@ -179,7 +133,7 @@ export function CouncilTeacherJoin() {
             </div>
             <div className="min-w-0">
               <div className="text-xs text-indigo-300 mb-0.5">
-                Élève {(session?.currentStudentIndex ?? 0) + 1} / {session?.students.length}
+                Élève {(session.currentStudentIndex) + 1} / {session.students.length}
               </div>
               <h2 className="text-lg font-bold leading-tight truncate">
                 {currentStudent.firstName} {currentStudent.lastName}
@@ -195,7 +149,7 @@ export function CouncilTeacherJoin() {
             </div>
           </div>
         ) : (
-          <p className="text-slate-400 text-sm text-center">En attente…</p>
+          <p className="text-slate-400 text-sm text-center">En attente du démarrage…</p>
         )}
       </div>
 
@@ -210,7 +164,7 @@ export function CouncilTeacherJoin() {
 
         {currentRemarks.length === 0 && (
           <p className="text-sm text-slate-500 italic text-center py-6">
-            Aucune remarque pour cet élève.<br />Soyez le premier à en ajouter.
+            Aucune remarque pour cet élève.
           </p>
         )}
 
@@ -247,7 +201,7 @@ export function CouncilTeacherJoin() {
           />
           <button
             onClick={handleSendRemark}
-            disabled={sending || !remark.trim()}
+            disabled={!remark.trim()}
             className="p-3 bg-indigo-600 hover:bg-indigo-700 rounded-xl disabled:opacity-40 flex-shrink-0"
           >
             <Send size={17} />
