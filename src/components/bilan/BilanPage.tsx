@@ -167,7 +167,7 @@ export function BilanPage() {
             Aucun élève en {selectedClass} pour {currentYear}.
           </div>
         ) : (
-          <ul className="divide-y divide-slate-100">
+          <ul className="divide-y divide-slate-100 overflow-y-auto max-h-[58vh]">
             {students.map(s => (
               <li
                 key={s.id}
