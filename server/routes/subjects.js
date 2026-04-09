@@ -92,11 +92,12 @@ router.patch('/reorder', async (req, res) => {
 
 // ─── POST /api/subjects ───────────────────────────────────────────────────────
 router.post('/', async (req, res) => {
-  const { name, coefficient, teacherName, school } = req.body;
+  const { name, coefficient, teacherName, school, grade } = req.body;
   if (!name?.trim()) return res.status(400).json({ message: 'Le nom de la matière est requis.' });
 
   const normalizedName = name.trim().toUpperCase();
   const targetSchool   = school ?? 'sully';
+  const targetGrade    = grade?.trim().toUpperCase() || null;
   const id = `subj-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
   try {
@@ -109,9 +110,9 @@ router.post('/', async (req, res) => {
     const nextOrder = maxRow[0].next_order;
 
     const { rows } = await pool.query(
-      `INSERT INTO subjects (id, name, coefficient, teacher_name, school, display_order)
-       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-      [id, normalizedName, coefficient ?? 1, teacherName?.trim() || null, targetSchool, nextOrder]
+      `INSERT INTO subjects (id, name, coefficient, teacher_name, school, grade, display_order)
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+      [id, normalizedName, coefficient ?? 1, teacherName?.trim() || null, targetSchool, targetGrade, nextOrder]
     );
     return res.status(201).json(rowToSubject(rows[0]));
   } catch (err) {
@@ -125,14 +126,16 @@ router.post('/', async (req, res) => {
 
 // ─── PUT /api/subjects/:id ────────────────────────────────────────────────────
 router.put('/:id', async (req, res) => {
-  const { name, coefficient, teacherName } = req.body;
+  const { name, coefficient, teacherName, grade } = req.body;
   if (!name?.trim()) return res.status(400).json({ message: 'Le nom de la matière est requis.' });
 
   const normalizedName = name.trim().toUpperCase();
+  const targetGrade    = grade?.trim().toUpperCase() || null;
+
   try {
     const { rows } = await pool.query(
-      `UPDATE subjects SET name=$1, coefficient=$2, teacher_name=$3 WHERE id=$4 RETURNING *`,
-      [normalizedName, coefficient ?? 1, teacherName?.trim() || null, req.params.id]
+      `UPDATE subjects SET name=$1, coefficient=$2, teacher_name=$3, grade=$4 WHERE id=$5 RETURNING *`,
+      [normalizedName, coefficient ?? 1, teacherName?.trim() || null, targetGrade, req.params.id]
     );
     if (rows.length === 0) return res.status(404).json({ message: 'Matière introuvable.' });
     return res.json(rowToSubject(rows[0]));

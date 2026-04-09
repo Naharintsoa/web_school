@@ -65,7 +65,6 @@ export function ClassGradesList({ grade, onBack }: ClassGradesListProps) {
   // S'abonner aux modifications de matières
   useEffect(() => {
     const unsubscribe = subjectsApi.subscribe(() => {
-      // Passer la classe : récupère le bon prof par classe
       subjectsApi.getAll(currentSchool, grade).then(setSubjects);
     });
     return unsubscribe;
