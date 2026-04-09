@@ -4,7 +4,7 @@
  * Fonctionnalités :
  * - Affiche toutes les matières avec leur professeur et coefficient
  * - Ajout d'une nouvelle matière directement depuis cette page
- * - Édition en ligne : nom du professeur + coefficient
+ * - Édition en ligne : nom du professeur + coefficient + classes (cases à cocher)
  * - S'abonne à subjectsApi → mise à jour automatique sans navigation
  * - Clic sur une matière → affichage SubjectExams
  */
@@ -31,10 +31,40 @@ function gradeLabel(grade: string | null | undefined): string {
   return grade.replace('EME', 'ème');
 }
 
-// ─── Formulaire d'ajout (ligne en bas du tableau) ─────────────────────────────
+// ─── Cases à cocher des classes ───────────────────────────────────────────────
+
+interface GradeCheckboxesProps {
+  selected: string[];
+  onChange: (g: string) => void;
+}
+
+function GradeCheckboxes({ selected, onChange }: GradeCheckboxesProps) {
+  return (
+    <div className="flex flex-wrap gap-x-3 gap-y-1.5">
+      {ALL_GRADES.map(g => (
+        <label key={g} className="flex items-center gap-1.5 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={selected.includes(g)}
+            onChange={() => onChange(g)}
+            className="accent-indigo-600 w-3.5 h-3.5 cursor-pointer"
+          />
+          <span className="text-xs text-gray-700">{gradeLabel(g)}</span>
+        </label>
+      ))}
+      <p className="w-full text-xs text-gray-400 mt-0.5 italic">
+        {selected.length === 0
+          ? 'Aucune sélection = toutes les classes'
+          : `${selected.length} classe(s) sélectionnée(s)`}
+      </p>
+    </div>
+  );
+}
+
+// ─── Formulaire d'ajout ───────────────────────────────────────────────────────
 
 interface AddRowProps {
-  onAdd: (name: string, coeff: number, teacher: string, grade: string | null) => void;
+  onAdd: (name: string, coeff: number, teacher: string, grades: string[]) => void;
   onCancel: () => void;
 }
 
@@ -42,11 +72,14 @@ function AddRow({ onAdd, onCancel }: AddRowProps) {
   const [name, setName] = useState('');
   const [coeff, setCoeff] = useState(1);
   const [teacher, setTeacher] = useState('');
-  const [grade, setGrade] = useState('');
+  const [grades, setGrades] = useState<string[]>([]);
+
+  const toggle = (g: string) =>
+    setGrades(prev => prev.includes(g) ? prev.filter(x => x !== g) : [...prev, g]);
 
   const submit = () => {
     if (!name.trim()) return;
-    onAdd(name.trim().toUpperCase(), Math.max(1, Math.min(10, coeff)), teacher.trim(), grade || null);
+    onAdd(name.trim().toUpperCase(), Math.max(1, Math.min(10, coeff)), teacher.trim(), grades);
   };
 
   return (
@@ -80,16 +113,9 @@ function AddRow({ onAdd, onCancel }: AddRowProps) {
           className="border border-indigo-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-indigo-500 w-44"
         />
       </td>
-      {/* Classe spécifique */}
+      {/* Classes */}
       <td className="px-4 py-3">
-        <select
-          value={grade}
-          onChange={e => setGrade(e.target.value)}
-          className="border border-indigo-300 rounded-lg px-2 py-1.5 text-sm focus:ring-2 focus:ring-indigo-500 w-36"
-        >
-          <option value="">Toutes classes</option>
-          {ALL_GRADES.map(g => <option key={g} value={g}>{gradeLabel(g)}</option>)}
-        </select>
+        <GradeCheckboxes selected={grades} onChange={toggle} />
       </td>
       {/* Actions */}
       <td className="px-4 py-3">
@@ -118,11 +144,11 @@ export function TeacherList() {
   const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
   const [showAddRow, setShowAddRow] = useState(false);
 
-  // Édition en ligne : id de la ligne en cours + champs locaux
+  // Édition en ligne
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTeacherName, setEditTeacherName] = useState('');
   const [editCoeff, setEditCoeff] = useState(1);
-  const [editGrade, setEditGrade] = useState<string>('');
+  const [editGrades, setEditGrades] = useState<string[]>([]);
 
   const loadSubjects = useCallback(async () => {
     const data = await subjectsApi.getAll(currentSchool);
@@ -132,7 +158,6 @@ export function TeacherList() {
 
   useEffect(() => { loadSubjects(); }, [loadSubjects]);
 
-  // Abonnement → refresh automatique quand une matière change ailleurs
   useEffect(() => {
     const unsubscribe = subjectsApi.subscribe(() => {
       subjectsApi.getAll(currentSchool).then(data => {
@@ -145,37 +170,67 @@ export function TeacherList() {
 
   // ── Ajout ─────────────────────────────────────────────────────────────────
 
-  const handleAdd = async (name: string, coeff: number, teacher: string, grade: string | null) => {
+  const handleAdd = async (name: string, coeff: number, teacher: string, grades: string[]) => {
     const normalized = name.trim().toUpperCase();
 
-    // Vérification doublon côté client
-    const duplicate = subjects.find(s =>
-      s.name.toUpperCase() === normalized &&
-      (s.grade ?? null) === grade
-    );
-    if (duplicate) {
-      const scope = grade ? `pour la classe ${gradeLabel(grade)}` : 'pour toutes les classes';
-      showToast(`La matière "${normalized}" existe déjà ${scope}.`, 'error');
-      return;
-    }
-
-    try {
-      await subjectsApi.create({ name: normalized, coefficient: coeff, teacherName: teacher, school: currentSchool, grade });
-      setShowAddRow(false);
-      showToast(`Matière "${normalized}" ajoutée`, 'success');
-    } catch (err: any) {
-      showToast(err?.message ?? 'Erreur lors de l\'ajout.', 'error');
+    if (grades.length === 0) {
+      // Toutes classes
+      const duplicate = subjects.find(
+        s => s.name.toUpperCase() === normalized && (s.grade ?? null) === null
+      );
+      if (duplicate) {
+        showToast(`"${normalized}" existe déjà pour toutes les classes.`, 'error');
+        return;
+      }
+      try {
+        await subjectsApi.create({ name: normalized, coefficient: coeff, teacherName: teacher, school: currentSchool, grade: null });
+        setShowAddRow(false);
+        showToast(`Matière "${normalized}" ajoutée`, 'success');
+      } catch (err: any) {
+        showToast(err?.message ?? 'Erreur lors de l\'ajout.', 'error');
+      }
+    } else {
+      let created = 0;
+      for (const grade of grades) {
+        const duplicate = subjects.find(
+          s => s.name.toUpperCase() === normalized && s.grade === grade
+        );
+        if (duplicate) {
+          showToast(`"${normalized}" existe déjà pour ${gradeLabel(grade)}.`, 'error');
+          continue;
+        }
+        try {
+          await subjectsApi.create({ name: normalized, coefficient: coeff, teacherName: teacher, school: currentSchool, grade });
+          created++;
+        } catch (err: any) {
+          showToast(err?.message ?? `Erreur pour ${gradeLabel(grade)}.`, 'error');
+        }
+      }
+      if (created > 0) {
+        setShowAddRow(false);
+        showToast(`"${normalized}" ajouté pour ${created} classe(s)`, 'success');
+      }
     }
   };
 
   // ── Édition ───────────────────────────────────────────────────────────────
+
+  const toggleEditGrade = (g: string) =>
+    setEditGrades(prev => prev.includes(g) ? prev.filter(x => x !== g) : [...prev, g]);
 
   const startEdit = (subject: Subject, e: React.MouseEvent) => {
     e.stopPropagation();
     setEditingId(subject.id);
     setEditTeacherName(subject.teacherName ?? '');
     setEditCoeff(subject.coefficient);
-    setEditGrade(subject.grade ?? '');
+
+    // Pré-cocher toutes les classes des entrées ayant le même nom + même prof
+    const siblings = subjects.filter(
+      s => s.name === subject.name &&
+           (s.teacherName ?? '').trim().toLowerCase() === (subject.teacherName ?? '').trim().toLowerCase()
+    );
+    const grades = siblings.map(s => s.grade).filter(Boolean) as string[];
+    setEditGrades(grades);
   };
 
   const cancelEdit = (e: React.MouseEvent) => {
@@ -186,14 +241,50 @@ export function TeacherList() {
   const saveEdit = async (subject: Subject, e: React.MouseEvent) => {
     e.stopPropagation();
     const trimmedTeacher = editTeacherName.trim();
+    const coeff = Math.max(1, Math.min(10, editCoeff));
+
+    // Frères : même matière + même prof original
+    const siblings = subjects.filter(
+      s => s.name === subject.name &&
+           (s.teacherName ?? '').trim().toLowerCase() === (subject.teacherName ?? '').trim().toLowerCase()
+    );
 
     try {
-      await subjectsApi.update(subject.id, {
-        name: subject.name,
-        coefficient: Math.max(1, Math.min(10, editCoeff)),
-        teacherName: trimmedTeacher,
-        grade: editGrade || null,
-      });
+      if (editGrades.length === 0) {
+        // Aucune classe cochée → une seule entrée "Toutes classes"
+        await subjectsApi.update(subject.id, {
+          name: subject.name, coefficient: coeff, teacherName: trimmedTeacher, grade: null,
+        });
+        for (const sib of siblings) {
+          if (sib.id !== subject.id) await subjectsApi.delete(sib.id);
+        }
+      } else {
+        const sibByGrade = new Map(siblings.map(s => [s.grade ?? '', s]));
+
+        // Créer ou mettre à jour chaque classe cochée
+        for (const grade of editGrades) {
+          const existing = sibByGrade.get(grade);
+          if (existing) {
+            await subjectsApi.update(existing.id, {
+              name: subject.name, coefficient: coeff, teacherName: trimmedTeacher, grade,
+            });
+          } else {
+            await subjectsApi.create({
+              name: subject.name, coefficient: coeff, teacherName: trimmedTeacher,
+              school: currentSchool, grade,
+            });
+          }
+        }
+
+        // Supprimer les entrées décochées ou l'ancienne entrée "Toutes classes"
+        for (const sib of siblings) {
+          const g = sib.grade ?? '';
+          if (!g || !editGrades.includes(g)) {
+            await subjectsApi.delete(sib.id);
+          }
+        }
+      }
+
       setEditingId(null);
       showToast(`"${subject.name}" mis à jour`, 'success');
     } catch (err: any) {
@@ -285,7 +376,7 @@ export function TeacherList() {
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Matière</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-28">Coefficient</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{FR.teachers.teacher}</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-36">Classes</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Classes</th>
                 <th className="px-6 py-3 w-24" />
               </tr>
             </thead>
@@ -345,7 +436,6 @@ export function TeacherList() {
                         value={editTeacherName}
                         onChange={e => setEditTeacherName(e.target.value)}
                         onKeyDown={e => {
-                          if (e.key === 'Enter') saveEdit(subject, e as unknown as React.MouseEvent);
                           if (e.key === 'Escape') setEditingId(null);
                         }}
                         placeholder="Nom du professeur"
@@ -358,21 +448,16 @@ export function TeacherList() {
                     )}
                   </td>
 
-                  {/* Classes — éditable */}
+                  {/* Classes — cases à cocher en mode édition */}
                   <td className="px-6 py-4" onClick={e => e.stopPropagation()}>
                     {editingId === subject.id ? (
-                      <select
-                        value={editGrade}
-                        onChange={e => setEditGrade(e.target.value)}
-                        className="border border-indigo-300 rounded-lg px-2 py-1.5 text-sm focus:ring-2 focus:ring-indigo-500 w-36"
-                      >
-                        <option value="">Toutes classes</option>
-                        {ALL_GRADES.map(g => <option key={g} value={g}>{gradeLabel(g)}</option>)}
-                      </select>
+                      <GradeCheckboxes selected={editGrades} onChange={toggleEditGrade} />
                     ) : (
-                      <span className={`text-sm ${subject.grade ? 'text-indigo-700 font-medium' : 'text-gray-400 italic'}`}>
-                        {gradeLabel(subject.grade)}
-                      </span>
+                      subject.grade
+                        ? <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700">
+                            {gradeLabel(subject.grade)}
+                          </span>
+                        : <span className="text-sm text-gray-400 italic">Toutes classes</span>
                     )}
                   </td>
 
@@ -417,7 +502,6 @@ export function TeacherList() {
                 </tr>
               ))}
 
-              {/* Ligne d'ajout */}
               {showAddRow && (
                 <AddRow
                   onAdd={handleAdd}
@@ -426,7 +510,6 @@ export function TeacherList() {
               )}
             </tbody>
 
-            {/* Bouton ajouter en pied de tableau */}
             {!showAddRow && (
               <tfoot>
                 <tr>
