@@ -24,10 +24,27 @@ export function CouncilLiveSession({ sessionId, onClose }: Props) {
   const [session, setSession] = useState<CouncilSession | null>(null);
   const [connected, setConnected] = useState(false);
   const [error, setError] = useState('');
+  const [joinUrl, setJoinUrl] = useState('');
   const remarkRef = useRef<HTMLTextAreaElement>(null);
 
-  // URL que les professeurs scanneront
-  const joinUrl = `${window.location.origin}/conseil/${sessionId}`;
+  // Construire l'URL QR avec l'IP LAN réelle (pas localhost)
+  useEffect(() => {
+    const buildUrl = async () => {
+      let base = window.location.origin;
+      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        try {
+          const res = await fetch('/api/council-sessions/server-info');
+          const data = await res.json();
+          const port = window.location.port || '80';
+          base = `${window.location.protocol}//${data.ip}:${port}`;
+        } catch {
+          // fallback : localhost (fonctionne si même machine)
+        }
+      }
+      setJoinUrl(`${base}/conseil/${sessionId}`);
+    };
+    buildUrl();
+  }, [sessionId]);
 
   useEffect(() => {
     const socket = getSocket();

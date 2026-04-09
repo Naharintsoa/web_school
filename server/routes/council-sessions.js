@@ -1,7 +1,23 @@
 import { Router } from 'express';
+import { networkInterfaces } from 'os';
 import { createSession, getSession, deleteSession } from '../councilSessions.js';
 
+/** Retourne la première IP LAN non-loopback IPv4 de la machine */
+function getLocalIp() {
+  for (const ifaces of Object.values(networkInterfaces())) {
+    for (const iface of (ifaces ?? [])) {
+      if (iface.family === 'IPv4' && !iface.internal) return iface.address;
+    }
+  }
+  return '127.0.0.1';
+}
+
 const router = Router();
+
+// GET /api/council-sessions/server-info — IP LAN pour le QR code
+router.get('/server-info', (_req, res) => {
+  res.json({ ip: getLocalIp() });
+});
 
 // POST /api/council-sessions — créer une session
 router.post('/', (req, res) => {

@@ -4,13 +4,14 @@
  * Rejoindre automatiquement à l'ouverture du lien.
  */
 import { useEffect, useState, useRef } from 'react';
-import { useParams } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { getSocket, disconnectSocket } from '../../../services/councilSocket';
 import type { CouncilSession } from '../../../services/councilSocket';
 import { MessageSquare, Send, Users, Wifi, WifiOff } from 'lucide-react';
 
 export function CouncilTeacherJoin() {
-  const { sessionId } = useParams<{ sessionId: string }>();
+  const location = useLocation();
+  const sessionId = location.pathname.split('/conseil/')[1] || '';
   const [session, setSession] = useState<CouncilSession | null>(null);
   const [closed, setClosed]   = useState(false);
   const [error, setError]     = useState('');
