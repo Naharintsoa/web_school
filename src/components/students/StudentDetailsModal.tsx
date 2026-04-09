@@ -6,6 +6,7 @@ import {
   Calendar, Hash, CheckCircle2, XCircle, Printer, Menu,
 } from 'lucide-react';
 import type { Student } from '../../types/student';
+import { CameraCapture } from '../camera/CameraCapture';
 import { SiblingsSection } from './SiblingsSection';
 import { CertificatePreview } from '../classes/certificates/CertificatePreview';
 import { IdentityCardPreview } from '../classes/identity-cards/IdentityCardPreview';
@@ -47,6 +48,7 @@ export function StudentDetailsModal({ student, allStudents = [], onClose, onEdit
   const [issVal, setIssVal] = useState(current.issNumber ?? '');
   const [savingIss, setSavingIss] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showCamera, setShowCamera] = useState(false);
   const [loadingFresh, setLoadingFresh] = useState(false);
 
   // Charger les données fraîches depuis le serveur à chaque ouverture
@@ -196,12 +198,20 @@ export function StudentDetailsModal({ student, allStudents = [], onClose, onEdit
               </span>
             </div>
 
-            <button
-              onClick={() => setActiveTab('photos')}
-              className="mt-4 w-full flex items-center justify-center gap-2 px-3 py-2 bg-white/10 hover:bg-white/20 text-white text-xs font-medium rounded-xl transition-colors border border-white/10"
-            >
-              <Camera size={13} /> Modifier la photo
-            </button>
+            <div className="mt-4 flex flex-col gap-2">
+              <button
+                onClick={() => setShowCamera(true)}
+                className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-indigo-500/30 hover:bg-indigo-500/50 text-white text-xs font-medium rounded-xl transition-colors border border-indigo-400/30"
+              >
+                <Camera size={13} /> Prendre une photo
+              </button>
+              <button
+                onClick={() => setActiveTab('photos')}
+                className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-white/10 hover:bg-white/20 text-white text-xs font-medium rounded-xl transition-colors border border-white/10"
+              >
+                <Upload size={13} /> Modifier la photo
+              </button>
+            </div>
           </div>
 
           {/* Indicateur de chargement */}
@@ -374,11 +384,28 @@ export function StudentDetailsModal({ student, allStudents = [], onClose, onEdit
               />
             )}
             {activeTab === 'sante'     && <TabSante />}
-            {activeTab === 'photos'    && <TabPhotos student={current} onSave={p => savePartial(p)} />}
+            {activeTab === 'photos'    && (
+              <TabPhotos
+                student={current}
+                onSave={p => savePartial(p)}
+                onOpenCamera={() => setShowCamera(true)}
+              />
+            )}
             {activeTab === 'documents' && <TabDocuments student={current} onTabChange={setActiveTab} />}
           </div>
         </main>
       </div>
+
+      {/* ── Modal caméra plein écran ── */}
+      {showCamera && (
+        <CameraCapture
+          onPhotoSelected={async url => {
+            await savePartial({ photoUrl: url });
+            setShowCamera(false);
+          }}
+          onClose={() => setShowCamera(false)}
+        />
+      )}
     </div>
   );
 }
@@ -750,7 +777,13 @@ function TabSante() {
 }
 
 // ─── Onglet Photos ─────────────────────────────────────────────────────────────
-function TabPhotos({ student, onSave }: { student: Student; onSave: (p: Partial<Omit<Student,'id'>>) => Promise<unknown> }) {
+function TabPhotos({
+  student, onSave, onOpenCamera,
+}: {
+  student: Student;
+  onSave: (p: Partial<Omit<Student,'id'>>) => Promise<unknown>;
+  onOpenCamera: () => void;
+}) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [saving, setSaving] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
@@ -771,9 +804,10 @@ function TabPhotos({ student, onSave }: { student: Student; onSave: (p: Partial<
   };
 
   return (
-    <div className="max-w-lg">
+    <div className="max-w-lg space-y-4">
       <SectionCard title="Photo de l'élève">
         <div className="flex items-start gap-6">
+          {/* Photo actuelle */}
           <div>
             <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Actuelle</p>
             <div className="w-32 h-32 rounded-2xl overflow-hidden border-2 border-slate-200 bg-slate-100 flex items-center justify-center shadow-inner">
@@ -783,6 +817,7 @@ function TabPhotos({ student, onSave }: { student: Student; onSave: (p: Partial<
             </div>
           </div>
 
+          {/* Nouvelle photo */}
           <div className="flex-1">
             <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Nouvelle photo</p>
             {preview ? (
@@ -801,13 +836,22 @@ function TabPhotos({ student, onSave }: { student: Student; onSave: (p: Partial<
                 </div>
               </div>
             ) : (
-              <div>
-                <button onClick={() => fileRef.current?.click()}
-                  className="flex flex-col items-center justify-center gap-2 w-32 h-32 border-2 border-dashed border-slate-300 rounded-2xl text-slate-400 hover:border-indigo-400 hover:text-indigo-500 hover:bg-indigo-50/50 transition-all">
-                  <Upload size={20} />
-                  <span className="text-xs font-medium">Choisir</span>
+              <div className="space-y-2">
+                {/* Bouton caméra */}
+                <button
+                  onClick={onOpenCamera}
+                  className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-xl transition-colors shadow-sm"
+                >
+                  <Camera size={15} />
+                  Prendre une photo
                 </button>
-                <p className="text-xs text-slate-400 mt-2">JPG, PNG, WEBP</p>
+                {/* Bouton fichier */}
+                <button onClick={() => fileRef.current?.click()}
+                  className="flex items-center gap-2 px-4 py-2 border border-slate-300 text-slate-600 text-sm rounded-xl hover:bg-slate-50 transition-colors">
+                  <Upload size={15} />
+                  Choisir un fichier
+                </button>
+                <p className="text-xs text-slate-400">JPG, PNG, WEBP</p>
               </div>
             )}
             <input ref={fileRef} type="file" accept="image/*" onChange={handleFile} className="hidden" />
