@@ -159,20 +159,50 @@ const tw = {
   th: { padding: '4px 6px', border: '1px solid #000', background: '#d9d9d9', fontWeight: 'bold' as const, textAlign: 'center' as const, fontSize: '9pt' },
   td: { padding: '4px 6px', border: '1px solid #000', verticalAlign: 'middle' as const, fontSize: '10pt' },
   tdC: { padding: '4px 6px', border: '1px solid #000', textAlign: 'center' as const, verticalAlign: 'middle' as const, fontSize: '10pt' },
-  navBar: {
-    background: '#09438a',
-    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-    padding: '10px 24px', flexShrink: 0, gap: '12px',
-  },
-  navBtn: (disabled: boolean): React.CSSProperties => ({
-    display: 'flex', alignItems: 'center', gap: '6px',
-    padding: '10px 24px', borderRadius: '8px', border: 'none', cursor: disabled ? 'not-allowed' : 'pointer',
-    fontWeight: 'bold', fontSize: '15px',
-    background: disabled ? '#1e3a5f' : '#2563eb',
-    color: disabled ? '#64748b' : '#fff',
-    transition: 'background 0.15s',
+  navFloatBtn: (disabled: boolean): React.CSSProperties => ({
+    position: 'absolute',
+    top: '50%',
+    transform: 'translateY(-50%)',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: '4px',
+    padding: '18px 13px',
+    borderRadius: '20px',
+    border: '1px solid rgba(255,255,255,0.18)',
+    background: disabled ? 'rgba(15,23,42,0.12)' : 'rgba(15,23,42,0.58)',
+    backdropFilter: 'blur(14px)',
+    WebkitBackdropFilter: 'blur(14px)',
+    color: disabled ? 'rgba(255,255,255,0.25)' : '#fff',
+    cursor: disabled ? 'not-allowed' : 'pointer',
+    boxShadow: disabled ? 'none' : '0 8px 32px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.12)',
+    transition: 'all 0.22s cubic-bezier(0.4,0,0.2,1)',
+    zIndex: 20,
+    fontSize: '11px',
+    fontWeight: 700,
+    letterSpacing: '0.5px',
+    textTransform: 'uppercase' as const,
+    userSelect: 'none' as const,
   }),
-  navCounter: { color: '#fff', fontSize: '18px', fontWeight: 'bold' },
+  navCounter: {
+    position: 'absolute' as const,
+    bottom: '18px',
+    left: '50%',
+    transform: 'translateX(-50%)',
+    padding: '7px 22px',
+    borderRadius: '100px',
+    background: 'rgba(15,23,42,0.60)',
+    backdropFilter: 'blur(14px)',
+    WebkitBackdropFilter: 'blur(14px)',
+    border: '1px solid rgba(255,255,255,0.15)',
+    color: '#fff',
+    fontSize: '14px',
+    fontWeight: 700,
+    letterSpacing: '1.5px',
+    boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+    zIndex: 20,
+    whiteSpace: 'nowrap' as const,
+  },
 };
 
 const LANG_KW = ['anglais', 'espagnol', 'allemand'];
@@ -263,9 +293,22 @@ export function CouncilDiapo({
           .diapo-td,
           .diapo-tdc      { font-size: 7.5pt !important; padding: 3px 3px !important; }
 
-          .diapo-navbar   { padding: 8px 10px !important; }
-          .diapo-navbtn   { padding: 8px 12px !important; font-size: 13px !important; }
-          .diapo-navcnt   { font-size: 14px !important; }
+          .diapo-nav-prev { left: 8px !important; padding: 12px 9px !important; }
+          .diapo-nav-next { right: 8px !important; padding: 12px 9px !important; }
+          .diapo-nav-prev span,
+          .diapo-nav-next span { display: none !important; }
+          .diapo-navcnt   { font-size: 12px !important; padding: 5px 14px !important; bottom: 10px !important; }
+        }
+
+        .diapo-nav-prev:not(:disabled):hover,
+        .diapo-nav-next:not(:disabled):hover {
+          background: rgba(15,23,42,0.82) !important;
+          box-shadow: 0 12px 40px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.15) !important;
+          transform: translateY(-50%) scale(1.06) !important;
+        }
+        .diapo-nav-prev:not(:disabled):active,
+        .diapo-nav-next:not(:disabled):active {
+          transform: translateY(-50%) scale(0.97) !important;
         }
       `}</style>
 
@@ -442,24 +485,44 @@ export function CouncilDiapo({
         </div>
       </div>
 
-      {/* ── Barre de navigation ── */}
-      <div className="diapo-navbar" style={tw.navBar}>
-        {!readOnly ? (
-          <>
-            <button className="diapo-navbtn" style={tw.navBtn(idx === 0)} onClick={prev} disabled={idx === 0}>
-              <ChevronLeft size={20} /> Précédent
-            </button>
-            <span className="diapo-navcnt" style={tw.navCounter}>{idx + 1} / {slides.length}</span>
-            <button className="diapo-navbtn" style={tw.navBtn(idx === slides.length - 1)} onClick={next} disabled={idx === slides.length - 1}>
-              Suivant <ChevronRight size={20} />
-            </button>
-          </>
-        ) : (
-          <span className="diapo-navcnt" style={{ ...tw.navCounter, width: '100%', textAlign: 'center' }}>
-            {idx + 1} / {slides.length}
-          </span>
-        )}
-      </div>
+      {/* ── Navigation flottante ── */}
+      {!readOnly && (
+        <>
+          {/* Bouton Précédent — flottant gauche */}
+          <button
+            className="diapo-nav-prev"
+            style={{ ...tw.navFloatBtn(idx === 0), left: '16px' }}
+            onClick={prev}
+            disabled={idx === 0}
+          >
+            <ChevronLeft size={26} />
+            <span>Préc.</span>
+          </button>
+
+          {/* Compteur — pill flottant bas centre */}
+          <div className="diapo-navcnt" style={tw.navCounter}>
+            {idx + 1}&nbsp;/&nbsp;{slides.length}
+          </div>
+
+          {/* Bouton Suivant — flottant droite */}
+          <button
+            className="diapo-nav-next"
+            style={{ ...tw.navFloatBtn(idx === slides.length - 1), right: '16px' }}
+            onClick={next}
+            disabled={idx === slides.length - 1}
+          >
+            <ChevronRight size={26} />
+            <span>Suiv.</span>
+          </button>
+        </>
+      )}
+
+      {/* Compteur seul en mode lecture (readOnly) */}
+      {readOnly && (
+        <div className="diapo-navcnt" style={tw.navCounter}>
+          {idx + 1}&nbsp;/&nbsp;{slides.length}
+        </div>
+      )}
     </div>
   );
 }
