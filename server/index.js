@@ -5,6 +5,7 @@ import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { initDB } from './db.js';
+import { attachSocketIO } from './socketServer.js';
 import authRoutes from './routes/auth.js';
 import studentRoutes from './routes/students.js';
 import gradeRoutes from './routes/grades.js';
@@ -16,9 +17,11 @@ import subjectRoutes from './routes/subjects.js';
 import chatRoutes from './routes/chat.js';
 import notificationRoutes from './routes/notifications.js';
 import cameraRoutes from './routes/camera.js';
+import councilSessionRoutes from './routes/council-sessions.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 3001;
+const DEV_ORIGIN = 'http://localhost:5173';
 
 const app = express();
 app.use(express.json({ limit: '10mb' }));
@@ -26,7 +29,7 @@ app.use(cookieParser());
 
 // CORS pour dev (Vite sur port 5173)
 if (process.env.NODE_ENV !== 'production') {
-  app.use(cors({ origin: 'http://localhost:5173', credentials: true }));
+  app.use(cors({ origin: DEV_ORIGIN, credentials: true }));
 }
 
 app.use('/api/auth', authRoutes);
@@ -40,6 +43,7 @@ app.use('/api/subjects', subjectRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/camera', cameraRoutes);
+app.use('/api/council-sessions', councilSessionRoutes);
 
 // Servir les photos uploadées (accessibles via /uploads/...)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -51,8 +55,14 @@ if (process.env.NODE_ENV === 'production') {
   app.get('*', (req, res) => res.sendFile(path.join(distPath, 'index.html')));
 }
 
+// Créer le serveur HTTP + attacher Socket.IO
+const httpServer = attachSocketIO(
+  app,
+  process.env.NODE_ENV !== 'production' ? DEV_ORIGIN : undefined,
+);
+
 initDB().then(() => {
-  app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+  httpServer.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 }).catch(err => {
   console.error('DB init failed:', err);
   process.exit(1);

@@ -14,9 +14,10 @@
  *   /options/templates → modèles de documents
  *   /options/purge     → suppression des données
  */
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './hooks/useAuth';
 import { useAuthContext } from './contexts/AuthContext';
+import { CouncilTeacherJoin } from './components/grades/council/CouncilTeacherJoin';
 import { LoginForm } from './components/auth/LoginForm';
 import { Layout } from './components/layout/Layout';
 import { StudentList } from './components/students/StudentList';
@@ -34,6 +35,12 @@ import { NavigationContext, useNavigationProvider } from './contexts/NavigationC
 
 function App() {
   const { user, loading, login, logout } = useAuth();
+  const location = useLocation();
+
+  // Route publique — accessible sans connexion (professeurs via QR code)
+  if (location.pathname.startsWith('/conseil/')) {
+    return <CouncilTeacherJoin />;
+  }
 
   if (loading) {
     return (
