@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   GraduationCap, ChevronRight, Edit2, Save, X,
-  BookOpen, Plus, Trash2, ArrowUp, ArrowDown,
+  BookOpen, Plus, Trash2, GripVertical,
 } from 'lucide-react';
 import { subjectsApi } from '../../services/api/subjectsApi';
 import { SubjectExams } from '../subjects/SubjectExams';
@@ -79,7 +79,8 @@ function AddRow({
 
   return (
     <tr className="bg-indigo-50 align-top">
-      <td className="px-6 py-3 text-xs text-indigo-400 pt-4">—</td>
+      <td className="px-2 py-3" />
+      <td className="px-4 py-3 text-xs text-indigo-400 pt-4">—</td>
       <td className="px-4 py-3">
         <input
           autoFocus type="text" value={name}
@@ -138,6 +139,10 @@ export function TeacherList() {
   const [editTeacherName, setEditTeacherName] = useState('');
   const [editCoeff, setEditCoeff] = useState(1);
   const [editGrades, setEditGrades] = useState<string[]>([]);
+
+  // ── Drag & drop ──────────────────────────────────────────────────────────
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
   const loadSubjects = useCallback(async () => {
     const data = await subjectsApi.getAll(currentSchool);
@@ -282,16 +287,31 @@ export function TeacherList() {
     }
   };
 
-  // ── Réordonnancement ──────────────────────────────────────────────────────
+  // ── Drag & drop handlers ──────────────────────────────────────────────────
 
-  const handleMoveSubject = async (index: number, direction: 'up' | 'down', e: React.MouseEvent) => {
-    e.stopPropagation();
-    const targetIndex = direction === 'up' ? index - 1 : index + 1;
-    if (targetIndex < 0 || targetIndex >= subjects.length) return;
+  const handleDragStart = (index: number) => {
+    setDragIndex(index);
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    if (index !== dragOverIndex) setDragOverIndex(index);
+  };
+
+  const handleDrop = async (e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault();
+    if (dragIndex === null || dragIndex === dropIndex) {
+      setDragIndex(null);
+      setDragOverIndex(null);
+      return;
+    }
 
     const newSubjects = [...subjects];
-    [newSubjects[index], newSubjects[targetIndex]] = [newSubjects[targetIndex], newSubjects[index]];
+    const [moved] = newSubjects.splice(dragIndex, 1);
+    newSubjects.splice(dropIndex, 0, moved);
     setSubjects(newSubjects);
+    setDragIndex(null);
+    setDragOverIndex(null);
 
     try {
       await subjectsApi.reorder(newSubjects.map(s => s.id));
@@ -299,6 +319,11 @@ export function TeacherList() {
       setSubjects(subjects);
       showToast('Erreur lors du réordonnancement.', 'error');
     }
+  };
+
+  const handleDragEnd = () => {
+    setDragIndex(null);
+    setDragOverIndex(null);
   };
 
   // ── Suppression ───────────────────────────────────────────────────────────
@@ -379,21 +404,22 @@ export function TeacherList() {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-10">N°</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Matière</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-28">Coefficient</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{FR.teachers.teacher}</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                <th className="px-2 py-3 w-8" />
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-10">N°</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Matière</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-28">Coefficient</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{FR.teachers.teacher}</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                   Classes collège
                   <span className="ml-1 text-gray-400 font-normal normal-case">(6ème→3ème)</span>
                 </th>
-                <th className="px-6 py-3 w-32" />
+                <th className="px-4 py-3 w-20" />
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-100">
               {subjects.length === 0 && !showAddRow && (
                 <tr>
-                  <td colSpan={6} className="px-6 py-16 text-center text-gray-400">
+                  <td colSpan={7} className="px-6 py-16 text-center text-gray-400">
                     <BookOpen size={40} className="mx-auto mb-3 opacity-30" />
                     <p>Aucune matière. Cliquez sur <strong>Nouvelle matière</strong> pour commencer.</p>
                   </td>
@@ -403,16 +429,34 @@ export function TeacherList() {
               {subjects.map((subject, index) => (
                 <tr
                   key={subject.id}
+                  draggable={editingId !== subject.id}
+                  onDragStart={() => handleDragStart(index)}
+                  onDragOver={e => handleDragOver(e, index)}
+                  onDrop={e => handleDrop(e, index)}
+                  onDragEnd={handleDragEnd}
                   onClick={() => editingId !== subject.id && setSelectedSubject(subject)}
                   className={`transition-colors align-middle ${
-                    editingId === subject.id ? 'bg-indigo-50' : 'hover:bg-gray-50 cursor-pointer'
+                    dragIndex === index
+                      ? 'opacity-40 bg-gray-100'
+                      : dragOverIndex === index
+                      ? 'bg-indigo-50 border-t-2 border-indigo-400'
+                      : editingId === subject.id
+                      ? 'bg-indigo-50'
+                      : 'hover:bg-gray-50 cursor-pointer'
                   }`}
                 >
+                  {/* Poignée drag */}
+                  <td className="px-2 py-4" onClick={e => e.stopPropagation()}>
+                    {editingId !== subject.id && (
+                      <GripVertical size={16} className="text-gray-300 cursor-grab active:cursor-grabbing" />
+                    )}
+                  </td>
+
                   {/* N° */}
-                  <td className="px-6 py-4 text-sm text-gray-400">{index + 1}</td>
+                  <td className="px-4 py-4 text-sm text-gray-400">{index + 1}</td>
 
                   {/* Matière */}
-                  <td className="px-6 py-4">
+                  <td className="px-4 py-4">
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-semibold text-indigo-700">{subject.name}</span>
                       {editingId !== subject.id && <ChevronRight size={15} className="text-gray-300" />}
@@ -420,7 +464,7 @@ export function TeacherList() {
                   </td>
 
                   {/* Coefficient */}
-                  <td className="px-6 py-4" onClick={e => e.stopPropagation()}>
+                  <td className="px-4 py-4" onClick={e => e.stopPropagation()}>
                     {editingId === subject.id ? (
                       <input
                         type="number" min="1" max="10" value={editCoeff}
@@ -435,7 +479,7 @@ export function TeacherList() {
                   </td>
 
                   {/* Professeur */}
-                  <td className="px-6 py-4" onClick={e => e.stopPropagation()}>
+                  <td className="px-4 py-4" onClick={e => e.stopPropagation()}>
                     {editingId === subject.id ? (
                       <input
                         autoFocus type="text" value={editTeacherName}
@@ -452,7 +496,7 @@ export function TeacherList() {
                   </td>
 
                   {/* Classes collège */}
-                  <td className="px-6 py-4" onClick={e => e.stopPropagation()}>
+                  <td className="px-4 py-4" onClick={e => e.stopPropagation()}>
                     {editingId === subject.id ? (
                       <CollegeCheckboxes selected={editGrades} onChange={toggleEditGrade} />
                     ) : subject.grade ? (
@@ -479,16 +523,6 @@ export function TeacherList() {
                       </div>
                     ) : (
                       <div className="flex items-center gap-1">
-                        <button onClick={e => handleMoveSubject(index, 'up', e)}
-                          disabled={index === 0}
-                          className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-md disabled:opacity-25 disabled:cursor-not-allowed" title="Monter">
-                          <ArrowUp size={14} />
-                        </button>
-                        <button onClick={e => handleMoveSubject(index, 'down', e)}
-                          disabled={index === subjects.length - 1}
-                          className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-md disabled:opacity-25 disabled:cursor-not-allowed" title="Descendre">
-                          <ArrowDown size={14} />
-                        </button>
                         <button onClick={e => startEdit(subject, e)}
                           className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-md" title="Modifier">
                           <Edit2 size={15} />
@@ -511,7 +545,7 @@ export function TeacherList() {
             {!showAddRow && (
               <tfoot>
                 <tr>
-                  <td colSpan={6} className="px-6 py-3 border-t border-gray-100">
+                  <td colSpan={7} className="px-6 py-3 border-t border-gray-100">
                     <button
                       onClick={() => { setShowAddRow(true); setEditingId(null); }}
                       className="flex items-center gap-2 text-sm text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 px-3 py-1.5 rounded-lg transition-colors"
