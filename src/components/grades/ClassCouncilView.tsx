@@ -3,14 +3,14 @@
  * T2 : compare avec T1. T3 : compare avec T1 et T2.
  */
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Printer, Loader2, TrendingUp, TrendingDown, Minus, MonitorPlay, Radio } from 'lucide-react';
+import { ArrowLeft, Printer, Loader2, TrendingUp, TrendingDown, Minus, MonitorPlay } from 'lucide-react';
+import { getSocket, disconnectSocket } from '../../services/councilSocket';
 import type { Student } from '../../types/student';
 import type { Subject } from '../../types/subject';
 import type { Grade } from '../../types/grade';
 import { gradesApi } from '../../services/api';
 import { calculateAverage, calculateClassStats, getGradeLevel } from '../../utils/grades';
 import { CouncilDiapo } from './CouncilDiapo';
-import { CouncilLiveSession } from './council/CouncilLiveSession';
 import type { StudentSlide } from './CouncilDiapo';
 
 interface ClassCouncilViewProps {
@@ -61,7 +61,7 @@ export function ClassCouncilView({ grade, term, students, subjects, onClose }: C
   const [loading, setLoading] = useState(true);
   const [showDiapo, setShowDiapo] = useState(false);
   const [liveSessionId, setLiveSessionId] = useState<string | null>(null);
-  const [startingLive, setStartingLive] = useState(false);
+  const [joinUrl, setJoinUrl] = useState('');
 
   useEffect(() => {
     const studentIds = new Set(students.map(s => s.id));
@@ -71,8 +71,34 @@ export function ClassCouncilView({ grade, term, students, subjects, onClose }: C
     });
   }, [students]);
 
-  const startLiveSession = async () => {
-    setStartingLive(true);
+  const openDiapo = async () => {
+    // Construire les données du diaporama
+    const gradesByTerm = (t: 1 | 2 | 3) => allGrades.filter(g => g.term === t);
+    const currentTermGrades = gradesByTerm(term);
+    const csLocal: Record<string, { avg: number; min: number; max: number }> = {};
+    for (const subject of subjects) {
+      csLocal[subject.id] = calculateClassStats(currentTermGrades.filter(g => g.subjectId === subject.id));
+    }
+    const caLocal = calculateAverage(currentTermGrades);
+    const isBrevet = /^[34]/.test(grade.trim());
+
+    const ranked = students
+      .map(s => ({ s, sg: currentTermGrades.filter(g => g.studentId === s.id), sg1: gradesByTerm(1).filter(g => g.studentId === s.id), sg2: gradesByTerm(2).filter(g => g.studentId === s.id) }))
+      .map(r => ({ ...r, avg: calculateAverage(r.sg) }))
+      .sort((a, b) => b.avg - a.avg);
+
+    const slidesData: StudentSlide[] = ranked.map((r, i) => ({
+      student: r.s,
+      rank: i + 1,
+      avg: r.avg,
+      avg1: calculateAverage(r.sg1),
+      avg2: calculateAverage(r.sg2),
+      sg: r.sg,
+      brev:  brevets(r.sg),
+      brev1: brevets(r.sg1),
+      brev2: brevets(r.sg2),
+    }));
+
     try {
       const schoolYear = new Date().getFullYear() + '-' + (new Date().getFullYear() + 1);
       const res = await fetch('/api/council-sessions', {
@@ -80,26 +106,52 @@ export function ClassCouncilView({ grade, term, students, subjects, onClose }: C
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
-          grade,
-          term,
-          schoolYear,
-          students: students.map(s => ({
-            id: s.id,
-            firstName: s.firstName,
-            lastName: s.lastName,
-            matricule: s.matricule ?? '',
-            avg: calculateAverage(allGrades.filter(g => g.studentId === s.id && g.term === term)),
-          })).sort((a, b) => b.avg - a.avg),
+          grade, term, schoolYear,
+          students: slidesData.map(sl => ({
+            id: sl.student.id,
+            firstName: sl.student.firstName,
+            lastName: sl.student.lastName,
+            matricule: sl.student.matricule ?? '',
+            avg: sl.avg,
+          })),
+          diapoData: { slides: slidesData, subjects, classStats: csLocal, classAvg: caLocal, isBrevet },
         }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
+
+      // Rejoindre la session socket en tant qu'admin
+      const socket = getSocket();
+      const joinAdmin = () => socket.emit('join-council', { sessionId: data.id, name: 'Organisateur', role: 'admin' });
+      if (socket.connected) joinAdmin(); else socket.once('connect', joinAdmin);
+
+      // Construire l'URL QR avec l'IP LAN réelle
+      let base = window.location.origin;
+      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        try {
+          const info = await fetch('/api/council-sessions/server-info');
+          const { ip } = await info.json();
+          const port = window.location.port || '80';
+          base = `${window.location.protocol}//${ip}:${port}`;
+        } catch { /* fallback localhost */ }
+      }
+      setJoinUrl(`${base}/conseil/${data.id}`);
       setLiveSessionId(data.id);
     } catch (err: any) {
-      alert('Impossible de créer la session : ' + err.message);
-    } finally {
-      setStartingLive(false);
+      alert('Impossible de démarrer le diaporama partagé : ' + err.message);
     }
+
+    setShowDiapo(true);
+  };
+
+  const closeDiapo = () => {
+    if (liveSessionId) {
+      getSocket().emit('close-session', { sessionId: liveSessionId });
+      disconnectSocket();
+      setLiveSessionId(null);
+      setJoinUrl('');
+    }
+    setShowDiapo(false);
   };
 
   if (loading) {
@@ -108,16 +160,6 @@ export function ClassCouncilView({ grade, term, students, subjects, onClose }: C
         <Loader2 size={28} className="animate-spin mr-3" />
         <span>Chargement des notes…</span>
       </div>
-    );
-  }
-
-  // ── Vue session live (plein écran) ──
-  if (liveSessionId) {
-    return (
-      <CouncilLiveSession
-        sessionId={liveSessionId}
-        onClose={() => setLiveSessionId(null)}
-      />
     );
   }
 
@@ -173,7 +215,9 @@ export function ClassCouncilView({ grade, term, students, subjects, onClose }: C
         classStats={classStats}
         classAvg={classAvg}
         isBrevet={isBrevet}
-        onClose={() => setShowDiapo(false)}
+        onClose={closeDiapo}
+        onNavigate={idx => liveSessionId && getSocket().emit('set-student', { sessionId: liveSessionId, index: idx })}
+        joinUrl={joinUrl || undefined}
       />
     );
   }
@@ -193,18 +237,7 @@ export function ClassCouncilView({ grade, term, students, subjects, onClose }: C
           </div>
         </div>
         <button
-          onClick={startLiveSession}
-          disabled={startingLive}
-          className="flex items-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-700 rounded-lg text-sm font-medium disabled:opacity-60"
-        >
-          {startingLive
-            ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            : <Radio size={16} />
-          }
-          Session live
-        </button>
-        <button
-          onClick={() => setShowDiapo(true)}
+          onClick={openDiapo}
           className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-lg text-sm font-medium"
         >
           <MonitorPlay size={16} />

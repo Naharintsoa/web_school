@@ -38,6 +38,14 @@ export interface CouncilStudent {
   avg: number;
 }
 
+export interface CouncilDiapoData {
+  slides: any[];
+  subjects: any[];
+  classStats: Record<string, { avg: number; min: number; max: number }>;
+  classAvg: number;
+  isBrevet: boolean;
+}
+
 export interface CouncilSession {
   id: string;
   grade: string;
@@ -49,4 +57,5 @@ export interface CouncilSession {
   remarks: Record<string, CouncilRemark[]>;
   phase: 'waiting' | 'active' | 'closed';
   createdAt: string;
+  diapoData: CouncilDiapoData | null;
 }

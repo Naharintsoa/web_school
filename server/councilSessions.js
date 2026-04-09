@@ -5,7 +5,7 @@ import { randomUUID } from 'crypto';
 
 const sessions = new Map();
 
-export function createSession({ grade, term, schoolYear, students = [] }) {
+export function createSession({ grade, term, schoolYear, students = [], diapoData = null }) {
   const id = randomUUID().replace(/-/g, '').slice(0, 12);
   const session = {
     id,
@@ -18,6 +18,7 @@ export function createSession({ grade, term, schoolYear, students = [] }) {
     remarks: {},        // { [studentId]: [{ author, text, at }] }
     phase: 'waiting',   // 'waiting' | 'active' | 'closed'
     createdAt: new Date().toISOString(),
+    diapoData,          // { slides, subjects, classStats, classAvg, isBrevet } | null
   };
   sessions.set(id, session);
   setTimeout(() => sessions.delete(id), 4 * 60 * 60 * 1000);

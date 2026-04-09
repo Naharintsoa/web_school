@@ -4,7 +4,8 @@
  * Conçu pour projection sur écran/projecteur.
  */
 import { useState, useEffect, useCallback } from 'react';
-import { ChevronLeft, ChevronRight, X, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X, TrendingUp, TrendingDown, Minus, QrCode } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 import type { Student } from '../../types/student';
 import type { Subject } from '../../types/subject';
 import type { Grade } from '../../types/grade';
@@ -40,6 +41,14 @@ interface CouncilDiapoProps {
   classAvg: number;
   isBrevet: boolean;
   onClose: () => void;
+  /** Index contrôlé depuis l'extérieur (mode lecture seule prof) */
+  externalIdx?: number;
+  /** Si vrai, masque navigation et fermeture */
+  readOnly?: boolean;
+  /** Appelé quand l'admin change de slide */
+  onNavigate?: (idx: number) => void;
+  /** URL d'accès pour le QR code (affiché dans la barre du diapo) */
+  joinUrl?: string;
 }
 
 const termLabel = (t: number) => `Trimestre ${t}`;
@@ -175,14 +184,31 @@ const isLang = (n: string) => LANG_KW.some(k => n.toLowerCase().includes(k));
 
 export function CouncilDiapo({
   slides, term, grade, subjects, classStats, classAvg, isBrevet, onClose,
+  externalIdx, readOnly = false, onNavigate, joinUrl,
 }: CouncilDiapoProps) {
-  const [idx, setIdx] = useState(0);
+  const [localIdx, setLocalIdx] = useState(0);
+  const [showQr, setShowQr] = useState(false);
 
-  const prev = useCallback(() => setIdx(i => Math.max(0, i - 1)), []);
-  const next = useCallback(() => setIdx(i => Math.min(slides.length - 1, i + 1)), [slides.length]);
+  // En mode lecture seule, l'index vient de l'extérieur
+  const idx = externalIdx !== undefined ? externalIdx : localIdx;
 
-  // Navigation clavier
+  const prev = useCallback(() => {
+    if (readOnly) return;
+    const next = Math.max(0, localIdx - 1);
+    setLocalIdx(next);
+    onNavigate?.(next);
+  }, [readOnly, localIdx, onNavigate]);
+
+  const next = useCallback(() => {
+    if (readOnly) return;
+    const next = Math.min(slides.length - 1, localIdx + 1);
+    setLocalIdx(next);
+    onNavigate?.(next);
+  }, [readOnly, localIdx, slides.length, onNavigate]);
+
+  // Navigation clavier (admin seulement)
   useEffect(() => {
+    if (readOnly) return;
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'ArrowRight' || e.key === 'ArrowDown') next();
       else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') prev();
@@ -190,7 +216,7 @@ export function CouncilDiapo({
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [next, prev, onClose]);
+  }, [next, prev, onClose, readOnly]);
 
   if (slides.length === 0) return null;
 
@@ -201,16 +227,47 @@ export function CouncilDiapo({
     .map(s => ({ subject: s, gradeRow: sg.find(g => g.subjectId === s.id) ?? null }));
 
   return (
-    <div style={tw.overlay}>
+    <div style={{ ...tw.overlay, position: 'fixed' }}>
       {/* ── Barre supérieure ── */}
       <div style={tw.topBar}>
         <span style={tw.topTitle}>
           Conseil de classe — {grade} — {termLabel(term)}
+          {readOnly && <span style={{ marginLeft: 12, fontSize: '12px', opacity: 0.7 }}>● En direct</span>}
         </span>
-        <button style={tw.topClose} onClick={onClose}>
-          <X size={16} /> Quitter le diaporama
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {joinUrl && (
+            <button
+              style={{ ...tw.topClose, background: showQr ? '#fff' : 'rgba(255,255,255,0.15)', color: showQr ? '#09438a' : '#fff' }}
+              onClick={() => setShowQr(v => !v)}
+            >
+              <QrCode size={16} /> QR Code
+            </button>
+          )}
+          {!readOnly && (
+            <button style={tw.topClose} onClick={onClose}>
+              <X size={16} /> Quitter
+            </button>
+          )}
+        </div>
       </div>
+
+      {/* ── Panneau QR ── */}
+      {showQr && joinUrl && (
+        <div style={{
+          position: 'absolute', top: 52, right: 16, zIndex: 10,
+          background: '#fff', borderRadius: 12, padding: 16,
+          boxShadow: '0 8px 32px rgba(0,0,0,0.25)',
+          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
+        }}>
+          <QRCodeSVG value={joinUrl} size={180} level="M" />
+          <p style={{ fontSize: 11, color: '#64748b', textAlign: 'center', maxWidth: 180, wordBreak: 'break-all', margin: 0 }}>
+            {joinUrl}
+          </p>
+          <p style={{ fontSize: 12, color: '#09438a', fontWeight: 'bold', margin: 0 }}>
+            Scanner pour suivre le diaporama
+          </p>
+        </div>
+      )}
 
       {/* ── Contenu principal ── */}
       <div style={tw.body}>
@@ -340,15 +397,21 @@ export function CouncilDiapo({
 
       {/* ── Barre de navigation ── */}
       <div style={tw.navBar}>
-        <button style={tw.navBtn(idx === 0)} onClick={prev} disabled={idx === 0}>
-          <ChevronLeft size={20} /> Précédent
-        </button>
-        <span style={tw.navCounter}>
-          {idx + 1} / {slides.length}
-        </span>
-        <button style={tw.navBtn(idx === slides.length - 1)} onClick={next} disabled={idx === slides.length - 1}>
-          Suivant <ChevronRight size={20} />
-        </button>
+        {!readOnly ? (
+          <>
+            <button style={tw.navBtn(idx === 0)} onClick={prev} disabled={idx === 0}>
+              <ChevronLeft size={20} /> Précédent
+            </button>
+            <span style={tw.navCounter}>{idx + 1} / {slides.length}</span>
+            <button style={tw.navBtn(idx === slides.length - 1)} onClick={next} disabled={idx === slides.length - 1}>
+              Suivant <ChevronRight size={20} />
+            </button>
+          </>
+        ) : (
+          <span style={{ ...tw.navCounter, width: '100%', textAlign: 'center' }}>
+            {idx + 1} / {slides.length}
+          </span>
+        )}
       </div>
     </div>
   );
