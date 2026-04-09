@@ -1,10 +1,12 @@
+import { randomUUID } from 'crypto';
+
 // Stockage en mémoire des sessions de conseil de classe.
 // Chaque session expire automatiquement après 4 heures.
 
 const sessions = new Map();
 
 export function createSession({ grade, term, schoolYear, students = [] }) {
-  const id = crypto.randomUUID().replace(/-/g, '').slice(0, 12);
+  const id = randomUUID().replace(/-/g, '').slice(0, 12);
   const session = {
     id,
     grade,
