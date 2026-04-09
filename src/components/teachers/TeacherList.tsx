@@ -1,13 +1,3 @@
-/**
- * Liste des professeurs — dynamique, synchronisée avec subjectsApi.
- *
- * Fonctionnalités :
- * - Affiche toutes les matières avec leur professeur et coefficient
- * - Ajout d'une nouvelle matière directement depuis cette page
- * - Édition en ligne : nom du professeur + coefficient + classes (cases à cocher)
- * - S'abonne à subjectsApi → mise à jour automatique sans navigation
- * - Clic sur une matière → affichage SubjectExams
- */
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   GraduationCap, ChevronRight, Edit2, Save, X,
@@ -24,38 +14,42 @@ function toExamSubject(s: Subject) {
   return { id: s.id, name: s.name, teacherId: '', coefficient: s.coefficient };
 }
 
-const ALL_GRADES = ['CP','CE1','CE2','CM1','CM2','6EME','5EME','4EME','3EME'];
+// Seules les classes du collège ont des cases à cocher
+const COLLEGE_GRADES = ['6EME', '5EME', '4EME', '3EME'];
 
 function gradeLabel(grade: string | null | undefined): string {
   if (!grade) return 'Toutes classes';
   return grade.replace('EME', 'ème');
 }
 
-// ─── Cases à cocher des classes ───────────────────────────────────────────────
+// ─── Cases à cocher collège ───────────────────────────────────────────────────
 
-interface GradeCheckboxesProps {
+function CollegeCheckboxes({
+  selected,
+  onChange,
+}: {
   selected: string[];
   onChange: (g: string) => void;
-}
-
-function GradeCheckboxes({ selected, onChange }: GradeCheckboxesProps) {
+}) {
   return (
-    <div className="flex flex-wrap gap-x-3 gap-y-1.5">
-      {ALL_GRADES.map(g => (
-        <label key={g} className="flex items-center gap-1.5 cursor-pointer select-none">
-          <input
-            type="checkbox"
-            checked={selected.includes(g)}
-            onChange={() => onChange(g)}
-            className="accent-indigo-600 w-3.5 h-3.5 cursor-pointer"
-          />
-          <span className="text-xs text-gray-700">{gradeLabel(g)}</span>
-        </label>
-      ))}
-      <p className="w-full text-xs text-gray-400 mt-0.5 italic">
+    <div className="space-y-1">
+      <div className="flex flex-wrap gap-x-4 gap-y-1.5">
+        {COLLEGE_GRADES.map(g => (
+          <label key={g} className="flex items-center gap-1.5 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={selected.includes(g)}
+              onChange={() => onChange(g)}
+              className="accent-indigo-600 w-3.5 h-3.5 cursor-pointer"
+            />
+            <span className="text-xs font-medium text-gray-700">{gradeLabel(g)}</span>
+          </label>
+        ))}
+      </div>
+      <p className="text-xs text-gray-400 italic">
         {selected.length === 0
           ? 'Aucune sélection = toutes les classes'
-          : `${selected.length} classe(s) sélectionnée(s)`}
+          : `${selected.length} classe(s)`}
       </p>
     </div>
   );
@@ -63,12 +57,13 @@ function GradeCheckboxes({ selected, onChange }: GradeCheckboxesProps) {
 
 // ─── Formulaire d'ajout ───────────────────────────────────────────────────────
 
-interface AddRowProps {
+function AddRow({
+  onAdd,
+  onCancel,
+}: {
   onAdd: (name: string, coeff: number, teacher: string, grades: string[]) => void;
   onCancel: () => void;
-}
-
-function AddRow({ onAdd, onCancel }: AddRowProps) {
+}) {
   const [name, setName] = useState('');
   const [coeff, setCoeff] = useState(1);
   const [teacher, setTeacher] = useState('');
@@ -83,9 +78,8 @@ function AddRow({ onAdd, onCancel }: AddRowProps) {
   };
 
   return (
-    <tr className="bg-indigo-50">
-      <td className="px-6 py-3 text-xs text-indigo-400">—</td>
-      {/* Nom matière */}
+    <tr className="bg-indigo-50 align-top">
+      <td className="px-6 py-3 text-xs text-indigo-400 pt-4">—</td>
       <td className="px-4 py-3">
         <input
           autoFocus type="text" value={name}
@@ -95,7 +89,6 @@ function AddRow({ onAdd, onCancel }: AddRowProps) {
           className="border border-indigo-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-indigo-500 w-44 uppercase"
         />
       </td>
-      {/* Coefficient */}
       <td className="px-4 py-3">
         <input
           type="number" min="1" max="10" value={coeff}
@@ -103,7 +96,6 @@ function AddRow({ onAdd, onCancel }: AddRowProps) {
           className="border border-indigo-300 rounded-lg px-2 py-1.5 text-sm text-center focus:ring-2 focus:ring-indigo-500 w-20"
         />
       </td>
-      {/* Professeur */}
       <td className="px-4 py-3">
         <input
           type="text" value={teacher}
@@ -113,12 +105,10 @@ function AddRow({ onAdd, onCancel }: AddRowProps) {
           className="border border-indigo-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-indigo-500 w-44"
         />
       </td>
-      {/* Classes */}
       <td className="px-4 py-3">
-        <GradeCheckboxes selected={grades} onChange={toggle} />
+        <CollegeCheckboxes selected={grades} onChange={toggle} />
       </td>
-      {/* Actions */}
-      <td className="px-4 py-3">
+      <td className="px-4 py-3 pt-4">
         <div className="flex items-center gap-1">
           <button onClick={submit} disabled={!name.trim()}
             className="p-1.5 text-white bg-indigo-600 hover:bg-indigo-700 rounded-md disabled:opacity-40" title="Ajouter">
@@ -144,7 +134,6 @@ export function TeacherList() {
   const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
   const [showAddRow, setShowAddRow] = useState(false);
 
-  // Édition en ligne
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTeacherName, setEditTeacherName] = useState('');
   const [editCoeff, setEditCoeff] = useState(1);
@@ -169,47 +158,37 @@ export function TeacherList() {
   }, [currentSchool]);
 
   // ── Ajout ─────────────────────────────────────────────────────────────────
+  // grades vide → une entrée sans classe (toutes classes)
+  // grades non vide → une entrée par classe du collège cochée
 
   const handleAdd = async (name: string, coeff: number, teacher: string, grades: string[]) => {
     const normalized = name.trim().toUpperCase();
+    const targets = grades.length > 0 ? grades : [null];
 
-    if (grades.length === 0) {
-      // Toutes classes
+    let created = 0;
+    for (const grade of targets) {
       const duplicate = subjects.find(
-        s => s.name.toUpperCase() === normalized && (s.grade ?? null) === null
+        s => s.name.toUpperCase() === normalized && (s.grade ?? null) === grade
       );
       if (duplicate) {
-        showToast(`"${normalized}" existe déjà pour toutes les classes.`, 'error');
-        return;
+        showToast(`"${normalized}" existe déjà${grade ? ` pour ${gradeLabel(grade)}` : ''}.`, 'error');
+        continue;
       }
       try {
-        await subjectsApi.create({ name: normalized, coefficient: coeff, teacherName: teacher, school: currentSchool, grade: null });
-        setShowAddRow(false);
-        showToast(`Matière "${normalized}" ajoutée`, 'success');
+        await subjectsApi.create({ name: normalized, coefficient: coeff, teacherName: teacher, school: currentSchool, grade });
+        created++;
       } catch (err: any) {
         showToast(err?.message ?? 'Erreur lors de l\'ajout.', 'error');
       }
-    } else {
-      let created = 0;
-      for (const grade of grades) {
-        const duplicate = subjects.find(
-          s => s.name.toUpperCase() === normalized && s.grade === grade
-        );
-        if (duplicate) {
-          showToast(`"${normalized}" existe déjà pour ${gradeLabel(grade)}.`, 'error');
-          continue;
-        }
-        try {
-          await subjectsApi.create({ name: normalized, coefficient: coeff, teacherName: teacher, school: currentSchool, grade });
-          created++;
-        } catch (err: any) {
-          showToast(err?.message ?? `Erreur pour ${gradeLabel(grade)}.`, 'error');
-        }
-      }
-      if (created > 0) {
-        setShowAddRow(false);
-        showToast(`"${normalized}" ajouté pour ${created} classe(s)`, 'success');
-      }
+    }
+    if (created > 0) {
+      setShowAddRow(false);
+      showToast(
+        created === 1
+          ? `"${normalized}" ajouté`
+          : `"${normalized}" ajouté pour ${created} classes`,
+        'success'
+      );
     }
   };
 
@@ -224,13 +203,23 @@ export function TeacherList() {
     setEditTeacherName(subject.teacherName ?? '');
     setEditCoeff(subject.coefficient);
 
-    // Pré-cocher toutes les classes des entrées ayant le même nom + même prof
-    const siblings = subjects.filter(
-      s => s.name === subject.name &&
-           (s.teacherName ?? '').trim().toLowerCase() === (subject.teacherName ?? '').trim().toLowerCase()
-    );
-    const grades = siblings.map(s => s.grade).filter(Boolean) as string[];
-    setEditGrades(grades);
+    // Pré-cocher les classes du collège déjà assignées à ce prof pour cette matière
+    const teacher = (subject.teacherName ?? '').trim().toLowerCase();
+    const siblingsGrades = subjects
+      .filter(s =>
+        s.name === subject.name &&
+        teacher !== '' &&
+        (s.teacherName ?? '').trim().toLowerCase() === teacher &&
+        s.grade !== null
+      )
+      .map(s => s.grade as string);
+
+    // Si la matière elle-même a une classe, s'assurer qu'elle est cochée
+    const initial = subject.grade
+      ? Array.from(new Set([...siblingsGrades, subject.grade]))
+      : siblingsGrades;
+
+    setEditGrades(initial);
   };
 
   const cancelEdit = (e: React.MouseEvent) => {
@@ -238,20 +227,24 @@ export function TeacherList() {
     setEditingId(null);
   };
 
+  // Sauvegarde : synchronise toutes les entrées (même nom + même prof original)
   const saveEdit = async (subject: Subject, e: React.MouseEvent) => {
     e.stopPropagation();
     const trimmedTeacher = editTeacherName.trim();
     const coeff = Math.max(1, Math.min(10, editCoeff));
+    const origTeacher = (subject.teacherName ?? '').trim().toLowerCase();
 
-    // Frères : même matière + même prof original
-    const siblings = subjects.filter(
-      s => s.name === subject.name &&
-           (s.teacherName ?? '').trim().toLowerCase() === (subject.teacherName ?? '').trim().toLowerCase()
+    // Toutes les entrées pour ce nom × ce prof (frères)
+    const siblings = subjects.filter(s =>
+      s.name === subject.name &&
+      (origTeacher === ''
+        ? s.id === subject.id
+        : (s.teacherName ?? '').trim().toLowerCase() === origTeacher)
     );
 
     try {
       if (editGrades.length === 0) {
-        // Aucune classe cochée → une seule entrée "Toutes classes"
+        // Aucune classe cochée → une seule entrée sans grade (toutes classes)
         await subjectsApi.update(subject.id, {
           name: subject.name, coefficient: coeff, teacherName: trimmedTeacher, grade: null,
         });
@@ -259,11 +252,9 @@ export function TeacherList() {
           if (sib.id !== subject.id) await subjectsApi.delete(sib.id);
         }
       } else {
-        const sibByGrade = new Map(siblings.map(s => [s.grade ?? '', s]));
-
-        // Créer ou mettre à jour chaque classe cochée
+        // Pour chaque classe cochée : mettre à jour si existe, sinon créer
         for (const grade of editGrades) {
-          const existing = sibByGrade.get(grade);
+          const existing = siblings.find(s => s.grade === grade);
           if (existing) {
             await subjectsApi.update(existing.id, {
               name: subject.name, coefficient: coeff, teacherName: trimmedTeacher, grade,
@@ -275,8 +266,7 @@ export function TeacherList() {
             });
           }
         }
-
-        // Supprimer les entrées décochées ou l'ancienne entrée "Toutes classes"
+        // Supprimer les entrées décochées
         for (const sib of siblings) {
           const g = sib.grade ?? '';
           if (!g || !editGrades.includes(g)) {
@@ -296,9 +286,9 @@ export function TeacherList() {
 
   const handleDelete = async (subject: Subject, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!window.confirm(`Supprimer la matière "${subject.name}" ?\nLes notes déjà saisies ne seront plus affichées.`)) return;
+    if (!window.confirm(`Supprimer "${subject.name}"${subject.grade ? ` (${gradeLabel(subject.grade)})` : ''} ?\nLes notes déjà saisies ne seront plus affichées.`)) return;
     await subjectsApi.delete(subject.id);
-    showToast(`"${subject.name}" supprimée`, 'success');
+    showToast(`Supprimé`, 'success');
   };
 
   // ── Vue détail matière ────────────────────────────────────────────────────
@@ -336,7 +326,6 @@ export function TeacherList() {
 
   return (
     <div className="space-y-6">
-      {/* En-tête */}
       <div className="bg-white rounded-xl shadow p-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
@@ -361,7 +350,6 @@ export function TeacherList() {
         </div>
       </div>
 
-      {/* Tableau */}
       <div className="bg-white rounded-xl shadow overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center py-16 text-gray-400">
@@ -376,7 +364,10 @@ export function TeacherList() {
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Matière</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-28">Coefficient</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{FR.teachers.teacher}</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Classes</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  Classes collège
+                  <span className="ml-1 text-gray-400 font-normal normal-case">(6ème→3ème)</span>
+                </th>
                 <th className="px-6 py-3 w-24" />
               </tr>
             </thead>
@@ -394,10 +385,8 @@ export function TeacherList() {
                 <tr
                   key={subject.id}
                   onClick={() => editingId !== subject.id && setSelectedSubject(subject)}
-                  className={`transition-colors ${
-                    editingId === subject.id
-                      ? 'bg-indigo-50'
-                      : 'hover:bg-gray-50 cursor-pointer'
+                  className={`transition-colors align-middle ${
+                    editingId === subject.id ? 'bg-indigo-50' : 'hover:bg-gray-50 cursor-pointer'
                   }`}
                 >
                   {/* N° */}
@@ -411,12 +400,11 @@ export function TeacherList() {
                     </div>
                   </td>
 
-                  {/* Coefficient — éditable */}
+                  {/* Coefficient */}
                   <td className="px-6 py-4" onClick={e => e.stopPropagation()}>
                     {editingId === subject.id ? (
                       <input
-                        type="number" min="1" max="10"
-                        value={editCoeff}
+                        type="number" min="1" max="10" value={editCoeff}
                         onChange={e => setEditCoeff(Number(e.target.value))}
                         className="border border-indigo-300 rounded-lg px-2 py-1.5 text-sm text-center focus:ring-2 focus:ring-indigo-500 w-20"
                       />
@@ -427,17 +415,13 @@ export function TeacherList() {
                     )}
                   </td>
 
-                  {/* Professeur — éditable */}
+                  {/* Professeur */}
                   <td className="px-6 py-4" onClick={e => e.stopPropagation()}>
                     {editingId === subject.id ? (
                       <input
-                        autoFocus
-                        type="text"
-                        value={editTeacherName}
+                        autoFocus type="text" value={editTeacherName}
                         onChange={e => setEditTeacherName(e.target.value)}
-                        onKeyDown={e => {
-                          if (e.key === 'Escape') setEditingId(null);
-                        }}
+                        onKeyDown={e => { if (e.key === 'Escape') setEditingId(null); }}
                         placeholder="Nom du professeur"
                         className="border border-indigo-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-indigo-500 w-48"
                       />
@@ -448,16 +432,16 @@ export function TeacherList() {
                     )}
                   </td>
 
-                  {/* Classes — cases à cocher en mode édition */}
+                  {/* Classes collège */}
                   <td className="px-6 py-4" onClick={e => e.stopPropagation()}>
                     {editingId === subject.id ? (
-                      <GradeCheckboxes selected={editGrades} onChange={toggleEditGrade} />
+                      <CollegeCheckboxes selected={editGrades} onChange={toggleEditGrade} />
+                    ) : subject.grade ? (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700">
+                        {gradeLabel(subject.grade)}
+                      </span>
                     ) : (
-                      subject.grade
-                        ? <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700">
-                            {gradeLabel(subject.grade)}
-                          </span>
-                        : <span className="text-sm text-gray-400 italic">Toutes classes</span>
+                      <span className="text-sm text-gray-400 italic">Toutes classes</span>
                     )}
                   </td>
 
@@ -465,35 +449,23 @@ export function TeacherList() {
                   <td className="px-4 py-4" onClick={e => e.stopPropagation()}>
                     {editingId === subject.id ? (
                       <div className="flex items-center gap-1">
-                        <button
-                          onClick={e => saveEdit(subject, e)}
-                          className="p-1.5 text-white bg-indigo-600 hover:bg-indigo-700 rounded-md"
-                          title="Enregistrer"
-                        >
+                        <button onClick={e => saveEdit(subject, e)}
+                          className="p-1.5 text-white bg-indigo-600 hover:bg-indigo-700 rounded-md" title="Enregistrer">
                           <Save size={14} />
                         </button>
-                        <button
-                          onClick={cancelEdit}
-                          className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-md"
-                          title="Annuler"
-                        >
+                        <button onClick={cancelEdit}
+                          className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-md" title="Annuler">
                           <X size={14} />
                         </button>
                       </div>
                     ) : (
                       <div className="flex items-center gap-1">
-                        <button
-                          onClick={e => startEdit(subject, e)}
-                          className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-md"
-                          title="Modifier"
-                        >
+                        <button onClick={e => startEdit(subject, e)}
+                          className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-md" title="Modifier">
                           <Edit2 size={15} />
                         </button>
-                        <button
-                          onClick={e => handleDelete(subject, e)}
-                          className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md"
-                          title="Supprimer"
-                        >
+                        <button onClick={e => handleDelete(subject, e)}
+                          className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md" title="Supprimer">
                           <Trash2 size={15} />
                         </button>
                       </div>
@@ -503,10 +475,7 @@ export function TeacherList() {
               ))}
 
               {showAddRow && (
-                <AddRow
-                  onAdd={handleAdd}
-                  onCancel={() => setShowAddRow(false)}
-                />
+                <AddRow onAdd={handleAdd} onCancel={() => setShowAddRow(false)} />
               )}
             </tbody>
 
