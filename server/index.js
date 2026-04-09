@@ -15,6 +15,7 @@ import templateRoutes from './routes/templates.js';
 import subjectRoutes from './routes/subjects.js';
 import chatRoutes from './routes/chat.js';
 import notificationRoutes from './routes/notifications.js';
+import cameraRoutes from './routes/camera.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 3001;
@@ -38,6 +39,10 @@ app.use('/api/templates', templateRoutes);
 app.use('/api/subjects', subjectRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/camera', cameraRoutes);
+
+// Servir les photos uploadées (accessibles via /uploads/...)
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Servir le frontend buildé en production
 if (process.env.NODE_ENV === 'production') {
