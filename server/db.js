@@ -321,6 +321,14 @@ export async function initDB() {
       );
     }
 
+    // ─── LITTÉRATURE : uniquement 6EME et 5EME ───────────────────────────────
+    // Supprimer les entrées LITTÉRATURE pour 4EME et 3EME (toutes écoles)
+    await client.query(
+      `DELETE FROM subjects
+       WHERE UPPER(TRIM(name)) = 'LITTERATURE'
+         AND grade IN ('4EME', '3EME')`
+    );
+
     console.log('Matières Sully et Sully Annexe initialisées.');
 
     // 4. Insérer les templates de documents par défaut si absents
