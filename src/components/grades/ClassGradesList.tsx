@@ -6,12 +6,14 @@
  * - Génération et impression du bulletin
  */
 import { useState, useEffect, useCallback } from 'react';
-import { Search, Printer, ArrowLeft, Settings2, Users, BookOpen, UserCircle, Calculator } from 'lucide-react';
+import { Search, Printer, ArrowLeft, Settings2, Users, BookOpen, UserCircle, Calculator, Download, Upload } from 'lucide-react';
 import { GradeInput } from './GradeInput';
 import { SubjectManager } from './SubjectManager';
 import { SubjectGradeEntry } from './SubjectGradeEntry';
 import { ReportCard } from './report-card/ReportCard';
 import { ClassCouncilView } from './ClassCouncilView';
+import { GradesImportModal } from './GradesImportModal';
+import { exportGrades } from '../../utils/gradesExportImport';
 import { useSchoolYear } from '../../contexts/SchoolYearContext';
 import { useSchool } from '../../contexts/SchoolContext';
 import { studentApi, gradesApi } from '../../services/api';
@@ -46,6 +48,7 @@ export function ClassGradesList({ grade, onBack }: ClassGradesListProps) {
   const [showReportCard, setShowReportCard] = useState(false);
   const [showSubjectManager, setShowSubjectManager] = useState(false);
   const [showCouncil, setShowCouncil] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const [entryMode, setEntryMode] = useState<'student' | 'subject'>('student');
 
   // Professeur principal de la classe
@@ -57,6 +60,7 @@ export function ClassGradesList({ grade, onBack }: ClassGradesListProps) {
   })();
 
   useEffect(() => { loadData(); }, [grade, currentYear, currentSchool]);
+  useEffect(() => { loadAllClassGrades(); }, [grade, selectedTerm, currentYear, currentSchool]);
 
   // S'abonner aux modifications de matières
   useEffect(() => {
@@ -70,12 +74,20 @@ export function ClassGradesList({ grade, onBack }: ClassGradesListProps) {
   const loadData = useCallback(async () => {
     const [loadedStudents, loadedSubjects] = await Promise.all([
       studentApi.getAll(currentYear, currentSchool),
-      // ?grade=3EME → backend retourne UNE ligne par matière avec le bon prof
       subjectsApi.getAll(currentSchool, grade),
     ]);
     setStudents(loadedStudents.filter(s => s.grade === grade));
     setSubjects(loadedSubjects);
   }, [grade, currentYear, currentSchool]);
+
+  const loadAllClassGrades = useCallback(async () => {
+    const [allStudents, allGrades] = await Promise.all([
+      studentApi.getAll(currentYear, currentSchool),
+      gradesApi.getAll(),
+    ]);
+    const classIds = new Set(allStudents.filter(s => s.grade === grade).map(s => s.id));
+    setAllClassGrades(allGrades.filter(g => classIds.has(g.studentId) && g.term === selectedTerm));
+  }, [grade, selectedTerm, currentYear, currentSchool]);
 
   const handleSubjectsChange = async () => {
     const updated = await subjectsApi.getAll(currentSchool, grade);
@@ -83,16 +95,11 @@ export function ClassGradesList({ grade, onBack }: ClassGradesListProps) {
   };
 
   const loadGrades = useCallback(async (student: Student) => {
-    const [studentGrades, allStudents, allGrades] = await Promise.all([
-      gradesApi.getByStudent(student.id),
-      studentApi.getAll(currentYear, currentSchool),
-      gradesApi.getAll(),
-    ]);
+    const studentGrades = await gradesApi.getByStudent(student.id);
     setGrades(studentGrades);
-
-    const classIds = new Set(allStudents.filter(s => s.grade === grade).map(s => s.id));
-    setAllClassGrades(allGrades.filter(g => classIds.has(g.studentId) && g.term === selectedTerm));
-  }, [grade, selectedTerm, currentYear]);
+    // Recharger aussi les stats de classe pour que les notes soient à jour
+    await loadAllClassGrades();
+  }, [loadAllClassGrades]);
 
   const handleStudentSelect = async (student: Student) => {
     setSelectedStudent(student);
@@ -101,7 +108,7 @@ export function ClassGradesList({ grade, onBack }: ClassGradesListProps) {
 
   useEffect(() => {
     if (selectedStudent) loadGrades(selectedStudent);
-  }, [selectedTerm]);
+  }, [selectedTerm]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleGradeChange = async (subjectId: string, score: number, comments?: string) => {
     if (!selectedStudent) return;
@@ -237,6 +244,22 @@ export function ClassGradesList({ grade, onBack }: ClassGradesListProps) {
               </button>
             </div>
 
+            <button
+              onClick={() => exportGrades(students, subjects, allClassGrades.length > 0 ? allClassGrades : [], selectedTerm, grade)}
+              title="Exporter les notes en Excel"
+              className="flex items-center gap-2 px-3 py-2 text-sm text-emerald-700 border border-emerald-300 rounded-lg hover:bg-emerald-50"
+            >
+              <Download size={16} />
+              <span className="hidden sm:inline">Exporter</span>
+            </button>
+            <button
+              onClick={() => setShowImport(true)}
+              title="Importer des notes depuis Excel/CSV"
+              className="flex items-center gap-2 px-3 py-2 text-sm text-blue-700 border border-blue-300 rounded-lg hover:bg-blue-50"
+            >
+              <Upload size={16} />
+              <span className="hidden sm:inline">Importer</span>
+            </button>
             <button
               onClick={() => setShowSubjectManager(true)}
               className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
@@ -401,6 +424,20 @@ export function ClassGradesList({ grade, onBack }: ClassGradesListProps) {
           subjects={subjects}
           onSubjectsChange={handleSubjectsChange}
           onClose={() => setShowSubjectManager(false)}
+        />
+      )}
+
+      {showImport && (
+        <GradesImportModal
+          students={students}
+          subjects={subjects}
+          term={selectedTerm}
+          grade={grade}
+          onClose={() => setShowImport(false)}
+          onImported={async () => {
+            await loadAllClassGrades();
+            if (selectedStudent) await loadGrades(selectedStudent);
+          }}
         />
       )}
     </div>
