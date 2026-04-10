@@ -35,9 +35,6 @@ const S = {
   header: { padding: '3px', border: '1px solid #000', background: '#d9d9d9', fontWeight: 'bold' as const, textAlign: 'center' as const, fontSize: '8pt', verticalAlign: 'bottom' as const },
 };
 
-const OPTIONAL_KEYWORDS = ['anglais', 'espagnol', 'allemand', 'litter'];
-const isOptional = (name: string) => OPTIONAL_KEYWORDS.some(k => name.toLowerCase().includes(k));
-
 export function BulletinPrintContent({
   student, grades, subjects, classStats, term, schoolYear,
   classAverage, teacherName, otherTermsAverages,

@@ -359,14 +359,29 @@ export async function initDB() {
       );
     }
 
-    // ─── LITTÉRATURE : uniquement 6EME et 5EME ───────────────────────────────
+    // ─── LITTÉRATURE : obligatoire pour 6EME et 5EME uniquement ─────────────
     // Supprimer toute entrée LITTÉRATURE qui n'est pas spécifiquement 6EME ou 5EME
-    // (cela couvre les entrées génériques grade=NULL et les classes 4EME/3EME)
     await client.query(
       `DELETE FROM subjects
-       WHERE UPPER(TRIM(name)) = 'LITTERATURE'
+       WHERE school = 'sully'
+         AND UPPER(TRIM(name)) = 'LITTERATURE'
          AND (grade IS NULL OR grade NOT IN ('6EME', '5EME'))`
     );
+    // S'assurer que LITTÉRATURE existe bien pour 6EME et 5EME
+    const litteratureEntries = [
+      { id: 'sully-litt-6eme', grade: '6EME', teacher: 'ZO LALAINA Rindratiana' },
+      { id: 'sully-litt-5eme', grade: '5EME', teacher: 'ZO LALAINA Rindratiana' },
+    ];
+    for (const { id, grade, teacher } of litteratureEntries) {
+      await client.query(
+        `INSERT INTO subjects (id, name, coefficient, teacher_name, school, grade)
+         VALUES ($1, 'LITTERATURE', 1, $2, 'sully', $3)
+         ON CONFLICT (id) DO UPDATE
+           SET teacher_name = EXCLUDED.teacher_name,
+               grade        = EXCLUDED.grade`,
+        [id, teacher, grade]
+      );
+    }
 
     console.log('Matières Sully et Sully Annexe initialisées.');
 

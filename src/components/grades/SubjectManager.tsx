@@ -13,9 +13,12 @@ interface SubjectManagerProps {
   subjects: Subject[];
   onSubjectsChange: () => void;
   onClose: () => void;
+  /** Classe courante — les nouvelles matières seront spécifiques à cette classe */
+  grade: string;
+  school: string;
 }
 
-export function SubjectManager({ subjects, onSubjectsChange, onClose }: SubjectManagerProps) {
+export function SubjectManager({ subjects, onSubjectsChange, onClose, grade, school }: SubjectManagerProps) {
   const { showToast } = useToast();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
@@ -36,6 +39,8 @@ export function SubjectManager({ subjects, onSubjectsChange, onClose }: SubjectM
       name: newName.trim().toUpperCase(),
       coefficient: Math.max(1, newCoeff),
       teacherName: newTeacher.trim(),
+      school,
+      grade,
     });
     setNewName('');
     setNewCoeff(1);
@@ -61,6 +66,8 @@ export function SubjectManager({ subjects, onSubjectsChange, onClose }: SubjectM
       name: editName.trim().toUpperCase(),
       coefficient: Math.max(1, editCoeff),
       teacherName: editTeacher.trim(),
+      school,
+      grade: subject.grade ?? grade,
     });
     setEditingId(null);
     onSubjectsChange();
@@ -85,7 +92,10 @@ export function SubjectManager({ subjects, onSubjectsChange, onClose }: SubjectM
         <div className="flex items-center justify-between p-5 border-b border-gray-100">
           <div className="flex items-center space-x-3">
             <BookOpen size={22} className="text-indigo-600" />
-            <h2 className="text-lg font-bold text-gray-900">Gestion des matières</h2>
+            <div>
+              <h2 className="text-lg font-bold text-gray-900">Gestion des matières</h2>
+              <p className="text-xs text-indigo-600 font-medium">Classe : {grade}</p>
+            </div>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-700 p-1 rounded-md hover:bg-gray-100">
             <X size={20} />
@@ -94,7 +104,7 @@ export function SubjectManager({ subjects, onSubjectsChange, onClose }: SubjectM
 
         {/* Info */}
         <div className="mx-5 mt-4 p-3 bg-blue-50 border border-blue-100 rounded-lg text-xs text-blue-700">
-          Les modifications s'appliquent à toutes les classes. Les notes déjà saisies pour une matière supprimée ne sont pas perdues.
+          Les matières ajoutées ici sont propres à la classe <strong>{grade}</strong>. Les notes saisies pour une matière supprimée ne sont pas perdues.
         </div>
 
         {/* Liste des matières */}

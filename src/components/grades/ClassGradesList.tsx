@@ -462,6 +462,8 @@ export function ClassGradesList({ grade, onBack }: ClassGradesListProps) {
           subjects={subjects}
           onSubjectsChange={handleSubjectsChange}
           onClose={() => setShowSubjectManager(false)}
+          grade={grade}
+          school={currentSchool}
         />
       )}
 
