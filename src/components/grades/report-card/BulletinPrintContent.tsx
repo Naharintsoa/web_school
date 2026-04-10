@@ -44,7 +44,14 @@ export function BulletinPrintContent({
   observation = '', mention = '', absences = '', demiJournees = '', retards = '',
 }: BulletinPrintContentProps) {
   const displayRows = subjects
-    .filter(s => isOptional(s.name) ? grades.some(g => g.subjectId === s.id) : true)
+    .filter(s => {
+      // Toujours masquer si pas de note élève ET pas de stats de classe (cours pas eu lieu)
+      const hasStudentGrade = grades.some(g => g.subjectId === s.id);
+      const stats = classStats[s.id];
+      const hasClassGrade = stats && (stats.avg > 0 || stats.min > 0 || stats.max > 0);
+      if (!hasStudentGrade && !hasClassGrade) return false;
+      return true;
+    })
     .map(s => ({ subject: s, grade: grades.find(g => g.subjectId === s.id) ?? null }));
 
   const studentAverage = calculateAverage(grades);
