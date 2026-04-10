@@ -1,7 +1,3 @@
-/**
- * Accordéon "Retards et Absences" — saisie en masse par classe.
- * Un seul appel API au chargement, sauvegarde manuelle par ligne.
- */
 import { useState, useEffect, useCallback } from 'react';
 import { ChevronDown, Clock, Save, Pencil, CheckCircle } from 'lucide-react';
 import { bulletinRemarksApi, type BulletinRemark } from '../../services/api/bulletinRemarksApi';
@@ -12,13 +8,9 @@ interface ClassAbsencePanelProps {
   term: 1 | 2 | 3;
 }
 
-type RemarksMap   = Record<string, BulletinRemark>;
-type DirtyMap     = Record<string, boolean>;
-type SavingMap    = Record<string, boolean>;
-type SavedMap     = Record<string, boolean>;
-type EditingMap   = Record<string, boolean>;
+type RemarksMap = Record<string, BulletinRemark>;
 
-const EMPTY_REMARK = (studentId: string, term: 1 | 2 | 3): BulletinRemark => ({
+const EMPTY = (studentId: string, term: 1 | 2 | 3): BulletinRemark => ({
   studentId, term, observation: '', mention: '', absences: '', demiJournees: '', retards: '',
 });
 
@@ -26,10 +18,9 @@ export function ClassAbsencePanel({ students, term }: ClassAbsencePanelProps) {
   const [open,    setOpen]    = useState(false);
   const [remarks, setRemarks] = useState<RemarksMap>({});
   const [loading, setLoading] = useState(false);
-  const [dirty,   setDirty]   = useState<DirtyMap>({});
-  const [saving,  setSaving]  = useState<SavingMap>({});
-  const [saved,   setSaved]   = useState<SavedMap>({});
-  const [editing, setEditing] = useState<EditingMap>({});
+  const [dirty,   setDirty]   = useState<Record<string, boolean>>({});
+  const [saving,  setSaving]  = useState<Record<string, boolean>>({});
+  const [saved,   setSaved]   = useState<Record<string, boolean>>({});
 
   const load = useCallback(async () => {
     if (students.length === 0) return;
@@ -37,11 +28,10 @@ export function ClassAbsencePanel({ students, term }: ClassAbsencePanelProps) {
     try {
       const list = await bulletinRemarksApi.getBatch(students.map(s => s.id), term);
       const map: RemarksMap = {};
-      for (const s of students) map[s.id] = EMPTY_REMARK(s.id, term);
+      for (const s of students) map[s.id] = EMPTY(s.id, term);
       for (const r of list)     map[r.studentId] = r;
       setRemarks(map);
       setDirty({});
-      setEditing({});
       setSaved({});
     } finally {
       setLoading(false);
@@ -56,8 +46,8 @@ export function ClassAbsencePanel({ students, term }: ClassAbsencePanelProps) {
     value: string,
   ) => {
     setRemarks(prev => ({ ...prev, [studentId]: { ...prev[studentId], [field]: value } }));
-    setDirty(prev => ({ ...prev, [studentId]: true }));
-    setSaved(prev => ({ ...prev, [studentId]: false }));
+    setDirty(prev  => ({ ...prev, [studentId]: true }));
+    setSaved(prev  => ({ ...prev, [studentId]: false }));
   };
 
   const handleSave = async (studentId: string) => {
@@ -65,34 +55,21 @@ export function ClassAbsencePanel({ students, term }: ClassAbsencePanelProps) {
     setSaving(prev => ({ ...prev, [studentId]: true }));
     try {
       await bulletinRemarksApi.save(studentId, term, {
-        observation:  r.observation,
-        mention:      r.mention,
-        absences:     r.absences,
-        demiJournees: r.demiJournees,
-        retards:      r.retards,
+        observation: r.observation, mention: r.mention,
+        absences: r.absences, demiJournees: r.demiJournees, retards: r.retards,
       });
-      setDirty(prev =>   ({ ...prev, [studentId]: false }));
-      setSaved(prev =>   ({ ...prev, [studentId]: true }));
-      setEditing(prev => ({ ...prev, [studentId]: false }));
+      setDirty(prev  => ({ ...prev, [studentId]: false }));
+      setSaved(prev  => ({ ...prev, [studentId]: true }));
       setTimeout(() => setSaved(prev => ({ ...prev, [studentId]: false })), 3000);
     } finally {
       setSaving(prev => ({ ...prev, [studentId]: false }));
     }
   };
 
-  const handleEdit = (studentId: string) => {
-    setEditing(prev => ({ ...prev, [studentId]: true }));
-    setSaved(prev =>   ({ ...prev, [studentId]: false }));
-  };
-
-  // Une ligne est en mode lecture si elle n'a jamais été modifiée ET n'est pas en édition
-  const isReadonly = (studentId: string) =>
-    !editing[studentId] && !dirty[studentId];
-
   return (
     <div className="bg-white rounded-xl shadow overflow-hidden">
 
-      {/* ── En-tête accordéon ── */}
+      {/* En-tête accordéon */}
       <button
         onClick={() => setOpen(v => !v)}
         className="w-full flex items-center justify-between px-5 py-4 hover:bg-gray-50 transition-colors group"
@@ -114,7 +91,7 @@ export function ClassAbsencePanel({ students, term }: ClassAbsencePanelProps) {
         />
       </button>
 
-      {/* ── Corps ── */}
+      {/* Corps */}
       <div className={`transition-all duration-300 overflow-hidden ${open ? 'max-h-[2000px]' : 'max-h-0'}`}>
         <div className="border-t border-gray-100">
           {loading ? (
@@ -127,95 +104,64 @@ export function ClassAbsencePanel({ students, term }: ClassAbsencePanelProps) {
               <table className="min-w-full text-sm">
                 <thead className="bg-gray-50 border-b border-gray-100">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider min-w-[170px]">
-                      Élève
-                    </th>
-                    <th className="px-3 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider w-28">
-                      Absences
-                    </th>
-                    <th className="px-3 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider w-32">
-                      Demi-journées
-                    </th>
-                    <th className="px-3 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider w-28">
-                      Retards
-                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider min-w-[170px]">Élève</th>
+                    <th className="px-3 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider w-28">Absences</th>
+                    <th className="px-3 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider w-32">Demi-journées</th>
+                    <th className="px-3 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider w-28">Retards</th>
                     <th className="px-3 py-3 w-36" />
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
                   {students.map((student, i) => {
-                    const r        = remarks[student.id];
+                    const r = remarks[student.id];
                     if (!r) return null;
-                    const ro       = isReadonly(student.id);
+                    const isDirty  = dirty[student.id];
                     const isSaving = saving[student.id];
                     const isSaved  = saved[student.id];
-                    const isDirty  = dirty[student.id];
 
                     return (
-                      <tr
-                        key={student.id}
-                        className={`transition-colors ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/40'} hover:bg-amber-50/30`}
-                      >
+                      <tr key={student.id} className={`transition-colors ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/40'} hover:bg-amber-50/30`}>
+
                         {/* Nom */}
                         <td className="px-4 py-2.5">
-                          <p className="font-medium text-gray-900 text-sm leading-tight">
-                            {student.lastName} {student.firstName}
-                          </p>
+                          <p className="font-medium text-gray-900 text-sm leading-tight">{student.lastName} {student.firstName}</p>
                           <p className="text-xs text-gray-400">N°{student.studentNumber}</p>
                         </td>
 
                         {/* Absences */}
                         <td className="px-3 py-2.5">
-                          {ro ? (
-                            <p className="text-center text-sm text-gray-700 font-medium">
-                              {r.absences || <span className="text-gray-300">—</span>}
-                            </p>
-                          ) : (
-                            <input
-                              type="text"
-                              value={r.absences}
-                              onChange={e => handleChange(student.id, 'absences', e.target.value)}
-                              className="w-full text-center border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:ring-2 focus:ring-amber-400 focus:border-amber-400 outline-none transition"
-                              placeholder="0"
-                            />
-                          )}
+                          <input
+                            type="text"
+                            value={r.absences}
+                            onChange={e => handleChange(student.id, 'absences', e.target.value)}
+                            className="w-full text-center border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:ring-2 focus:ring-amber-400 focus:border-amber-400 outline-none transition"
+                            placeholder="0"
+                          />
                         </td>
 
                         {/* Demi-journées */}
                         <td className="px-3 py-2.5">
-                          {ro ? (
-                            <p className="text-center text-sm text-gray-700 font-medium">
-                              {r.demiJournees || <span className="text-gray-300">—</span>}
-                            </p>
-                          ) : (
-                            <input
-                              type="text"
-                              value={r.demiJournees}
-                              onChange={e => handleChange(student.id, 'demiJournees', e.target.value)}
-                              className="w-full text-center border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:ring-2 focus:ring-amber-400 focus:border-amber-400 outline-none transition"
-                              placeholder="0"
-                            />
-                          )}
+                          <input
+                            type="text"
+                            value={r.demiJournees}
+                            onChange={e => handleChange(student.id, 'demiJournees', e.target.value)}
+                            className="w-full text-center border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:ring-2 focus:ring-amber-400 focus:border-amber-400 outline-none transition"
+                            placeholder="0"
+                          />
                         </td>
 
                         {/* Retards */}
                         <td className="px-3 py-2.5">
-                          {ro ? (
-                            <p className="text-center text-sm text-gray-700 font-medium">
-                              {r.retards || <span className="text-gray-300">—</span>}
-                            </p>
-                          ) : (
-                            <input
-                              type="text"
-                              value={r.retards}
-                              onChange={e => handleChange(student.id, 'retards', e.target.value)}
-                              className="w-full text-center border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:ring-2 focus:ring-amber-400 focus:border-amber-400 outline-none transition"
-                              placeholder="0"
-                            />
-                          )}
+                          <input
+                            type="text"
+                            value={r.retards}
+                            onChange={e => handleChange(student.id, 'retards', e.target.value)}
+                            className="w-full text-center border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:ring-2 focus:ring-amber-400 focus:border-amber-400 outline-none transition"
+                            placeholder="0"
+                          />
                         </td>
 
-                        {/* Bouton Enregistrer / Modifier */}
+                        {/* Bouton unique */}
                         <td className="px-3 py-2.5 text-right">
                           {isSaving ? (
                             <div className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-amber-600">
@@ -223,13 +169,8 @@ export function ClassAbsencePanel({ students, term }: ClassAbsencePanelProps) {
                               Enregistrement…
                             </div>
                           ) : isSaved && !isDirty ? (
-                            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-green-600 font-medium">
-                              <CheckCircle size={14} />
-                              Enregistré
-                            </div>
-                          ) : ro ? (
                             <button
-                              onClick={() => handleEdit(student.id)}
+                              onClick={() => handleSave(student.id)}
                               className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-50 transition-colors"
                             >
                               <Pencil size={13} />
