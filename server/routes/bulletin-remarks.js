@@ -38,6 +38,25 @@ router.get('/:studentId/:term', async (req, res) => {
   }
 });
 
+// POST /api/bulletin-remarks/batch  { studentIds: [...], term }
+// Retourne toutes les remarques pour une liste d'élèves et un trimestre
+router.post('/batch', async (req, res) => {
+  const { studentIds, term } = req.body;
+  if (!Array.isArray(studentIds) || studentIds.length === 0) {
+    return res.json([]);
+  }
+  try {
+    const { rows } = await pool.query(
+      `SELECT * FROM bulletin_remarks WHERE student_id = ANY($1) AND term = $2`,
+      [studentIds, Number(term)]
+    );
+    return res.json(rows.map(rowToRemark));
+  } catch (err) {
+    console.error('Erreur lecture remarques batch:', err);
+    return res.status(500).json({ message: 'Erreur serveur.' });
+  }
+});
+
 // PUT /api/bulletin-remarks/:studentId/:term  (upsert)
 router.put('/:studentId/:term', async (req, res) => {
   const { studentId, term } = req.params;

@@ -10,6 +10,7 @@ import { Search, Printer, ArrowLeft, Settings2, Users, BookOpen, UserCircle, Cal
 import { GradeInput } from './GradeInput';
 import { SubjectManager } from './SubjectManager';
 import { SubjectGradeEntry } from './SubjectGradeEntry';
+import { ClassAbsencePanel } from './ClassAbsencePanel';
 import { ReportCard } from './report-card/ReportCard';
 import { BulletinMultiPrint } from './BulletinMultiPrint';
 import { ClassCouncilView } from './ClassCouncilView';
@@ -456,6 +457,9 @@ export function ClassGradesList({ grade, onBack }: ClassGradesListProps) {
         )}
       </div>
       )}
+
+      {/* ── Accordéon Retards & Absences ── */}
+      <ClassAbsencePanel students={students} term={selectedTerm} />
 
       {showSubjectManager && (
         <SubjectManager

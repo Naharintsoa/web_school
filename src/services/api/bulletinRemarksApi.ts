@@ -15,6 +15,13 @@ export const bulletinRemarksApi = {
     return apiFetch<BulletinRemark | null>(`/bulletin-remarks/${studentId}/${term}`);
   },
 
+  getBatch: async (studentIds: string[], term: 1 | 2 | 3): Promise<BulletinRemark[]> => {
+    return apiFetch<BulletinRemark[]>('/bulletin-remarks/batch', {
+      method: 'POST',
+      body: JSON.stringify({ studentIds, term }),
+    });
+  },
+
   save: async (studentId: string, term: 1 | 2 | 3, data: Omit<BulletinRemark, 'studentId' | 'term'>): Promise<BulletinRemark> => {
     return apiFetch<BulletinRemark>(`/bulletin-remarks/${studentId}/${term}`, {
       method: 'PUT',
