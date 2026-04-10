@@ -6,7 +6,7 @@
  * - Génération et impression du bulletin
  */
 import { useState, useEffect, useCallback } from 'react';
-import { Search, Printer, ArrowLeft, Settings2, Users, BookOpen, UserCircle, Calculator, Download, Upload } from 'lucide-react';
+import { Search, Printer, ArrowLeft, Settings2, Users, BookOpen, UserCircle, Calculator, Download, Upload, Pencil, Save, X } from 'lucide-react';
 import { GradeInput } from './GradeInput';
 import { SubjectManager } from './SubjectManager';
 import { SubjectGradeEntry } from './SubjectGradeEntry';
@@ -21,6 +21,7 @@ import { useSchool } from '../../contexts/SchoolContext';
 import { studentApi, gradesApi } from '../../services/api';
 import { subjectsApi } from '../../services/api/subjectsApi';
 import { mockTeachers } from '../../data/mockTeachers';
+import { classTeachersApi } from '../../services/api/classTeachersApi';
 import { calculateAverage, calculateClassStats } from '../../utils/grades';
 import type { Student, Subject } from '../../types';
 import type { Grade } from '../../types/grade';
@@ -55,13 +56,36 @@ export function ClassGradesList({ grade, onBack }: ClassGradesListProps) {
   const [multiPrintGrades, setMultiPrintGrades] = useState<Grade[]>([]);
   const [entryMode, setEntryMode] = useState<'student' | 'subject'>('student');
 
-  // Professeur principal de la classe
-  const principalTeacher = (() => {
+  // Professeur principal — chargé depuis la base, éditable
+  const fallbackTeacher = (() => {
     const t = mockTeachers[grade];
     if (typeof t === 'string') return t;
     if (Array.isArray(t)) return t[0];
     return '';
   })();
+  const [principalTeacher, setPrincipalTeacher] = useState(fallbackTeacher);
+  const [editingTeacher, setEditingTeacher]     = useState(false);
+  const [editTeacherVal, setEditTeacherVal]     = useState('');
+  const [savingTeacher,  setSavingTeacher]      = useState(false);
+
+  useEffect(() => {
+    classTeachersApi.get(currentSchool, grade).then(name => {
+      setPrincipalTeacher(name || fallbackTeacher);
+    });
+  }, [currentSchool, grade]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const startEditTeacher = () => { setEditTeacherVal(principalTeacher); setEditingTeacher(true); };
+  const cancelEditTeacher = () => setEditingTeacher(false);
+  const saveTeacher = async () => {
+    setSavingTeacher(true);
+    try {
+      await classTeachersApi.update(currentSchool, grade, editTeacherVal.trim());
+      setPrincipalTeacher(editTeacherVal.trim());
+      setEditingTeacher(false);
+    } finally {
+      setSavingTeacher(false);
+    }
+  };
 
   useEffect(() => { loadData(); }, [grade, currentYear, currentSchool]);
   useEffect(() => { loadAllClassGrades(); }, [grade, selectedTerm, currentYear, currentSchool]);
@@ -246,6 +270,48 @@ export function ClassGradesList({ grade, onBack }: ClassGradesListProps) {
             <div>
               <h2 className="text-xl font-bold text-gray-900">Notes — {grade}</h2>
               <p className="text-xs text-gray-500 mt-0.5">{currentYear}</p>
+              {/* Professeur principal — éditable */}
+              {editingTeacher ? (
+                <div className="flex items-center gap-1.5 mt-1">
+                  <input
+                    type="text"
+                    value={editTeacherVal}
+                    onChange={e => setEditTeacherVal(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') saveTeacher(); if (e.key === 'Escape') cancelEditTeacher(); }}
+                    autoFocus
+                    className="text-xs border border-indigo-300 rounded px-2 py-1 focus:ring-1 focus:ring-indigo-500 focus:border-transparent w-56"
+                    placeholder="Nom du professeur principal"
+                  />
+                  <button
+                    onClick={saveTeacher}
+                    disabled={savingTeacher}
+                    className="p-1 text-indigo-600 hover:text-indigo-800 disabled:opacity-50"
+                    title="Enregistrer"
+                  >
+                    <Save size={14} />
+                  </button>
+                  <button
+                    onClick={cancelEditTeacher}
+                    className="p-1 text-gray-400 hover:text-gray-600"
+                    title="Annuler"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5 mt-1">
+                  <span className="text-xs text-gray-500">
+                    Prof. principal : <span className="font-medium text-gray-700">{principalTeacher || '—'}</span>
+                  </span>
+                  <button
+                    onClick={startEditTeacher}
+                    className="p-0.5 text-gray-400 hover:text-indigo-600 transition-colors"
+                    title="Modifier le professeur principal"
+                  >
+                    <Pencil size={12} />
+                  </button>
+                </div>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-2">

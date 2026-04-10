@@ -433,6 +433,39 @@ export async function initDB() {
       );
     }
 
+    // ─── Table professeurs principaux par classe ──────────────────────────────
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS class_teachers (
+        school       TEXT NOT NULL,
+        grade        TEXT NOT NULL,
+        teacher_name TEXT NOT NULL DEFAULT '',
+        PRIMARY KEY (school, grade)
+      )
+    `);
+
+    // Seed par défaut (ON CONFLICT DO NOTHING — ne remplace pas les saisies existantes)
+    const defaultClassTeachers = [
+      { school: 'sully', grade: 'PS',   teacher: 'RAMANANTAHIRY Norolalatiana Sylvia' },
+      { school: 'sully', grade: 'MS',   teacher: 'RAMAROSON Berthe' },
+      { school: 'sully', grade: 'GS',   teacher: 'RAKOTONDRANAIVO Mbolatiana Koloina' },
+      { school: 'sully', grade: 'CP',   teacher: 'RANDRIANARISOA Mioramalala Prisca' },
+      { school: 'sully', grade: 'CE1',  teacher: 'RANDRIANASOLO Raozy Miora' },
+      { school: 'sully', grade: 'CE2',  teacher: 'RAMANANIRAINY Norotahiana' },
+      { school: 'sully', grade: 'CM1',  teacher: 'RASOLOFOMANANA Franck Lalasoa' },
+      { school: 'sully', grade: 'CM2',  teacher: 'RAZAFIMIHAJA Saholimalala Odile' },
+      { school: 'sully', grade: '6EME', teacher: 'RAZAFIMIHAJA Saholimalala Odile' },
+      { school: 'sully', grade: '5EME', teacher: 'RAVELOMANANTSOA Miora' },
+      { school: 'sully', grade: '4EME', teacher: 'TAMARENA Hermann' },
+      { school: 'sully', grade: '3EME', teacher: 'ANDRIANIRINA N. Micah' },
+    ];
+    for (const { school, grade, teacher } of defaultClassTeachers) {
+      await client.query(
+        `INSERT INTO class_teachers (school, grade, teacher_name)
+         VALUES ($1, $2, $3) ON CONFLICT (school, grade) DO NOTHING`,
+        [school, grade, teacher]
+      );
+    }
+
     console.log('Base de données initialisée avec succès.');
   } finally {
     client.release();

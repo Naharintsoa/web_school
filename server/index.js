@@ -19,6 +19,7 @@ import notificationRoutes from './routes/notifications.js';
 import cameraRoutes from './routes/camera.js';
 import councilSessionRoutes from './routes/council-sessions.js';
 import bulletinRemarksRoutes from './routes/bulletin-remarks.js';
+import classTeachersRoutes from './routes/class-teachers.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 3001;
@@ -46,6 +47,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/camera', cameraRoutes);
 app.use('/api/council-sessions', councilSessionRoutes);
 app.use('/api/bulletin-remarks', bulletinRemarksRoutes);
+app.use('/api/class-teachers', classTeachersRoutes);
 
 // Servir les photos uploadées (accessibles via /uploads/...)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
