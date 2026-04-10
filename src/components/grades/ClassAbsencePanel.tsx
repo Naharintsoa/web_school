@@ -1,9 +1,9 @@
 /**
  * Accordéon "Retards et Absences" — saisie en masse par classe.
- * Un seul appel API au chargement, sauvegarde auto par ligne avec debounce.
+ * Un seul appel API au chargement, sauvegarde manuelle par ligne.
  */
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { ChevronDown, CheckCircle, Clock } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { ChevronDown, Clock, Save, Pencil, CheckCircle } from 'lucide-react';
 import { bulletinRemarksApi, type BulletinRemark } from '../../services/api/bulletinRemarksApi';
 import type { Student } from '../../types';
 
@@ -12,21 +12,24 @@ interface ClassAbsencePanelProps {
   term: 1 | 2 | 3;
 }
 
-type RemarksMap = Record<string, BulletinRemark>;
+type RemarksMap   = Record<string, BulletinRemark>;
+type DirtyMap     = Record<string, boolean>;
+type SavingMap    = Record<string, boolean>;
+type SavedMap     = Record<string, boolean>;
+type EditingMap   = Record<string, boolean>;
 
 const EMPTY_REMARK = (studentId: string, term: 1 | 2 | 3): BulletinRemark => ({
   studentId, term, observation: '', mention: '', absences: '', demiJournees: '', retards: '',
 });
 
-const MENTIONS = ['', 'Félicitations', 'Compliments', 'Encouragements', 'Mise en garde', 'Avertissement'];
-
 export function ClassAbsencePanel({ students, term }: ClassAbsencePanelProps) {
-  const [open, setOpen]       = useState(false);
+  const [open,    setOpen]    = useState(false);
   const [remarks, setRemarks] = useState<RemarksMap>({});
   const [loading, setLoading] = useState(false);
-  const [saving,  setSaving]  = useState<Record<string, boolean>>({});
-  const [saved,   setSaved]   = useState<Record<string, boolean>>({});
-  const timers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const [dirty,   setDirty]   = useState<DirtyMap>({});
+  const [saving,  setSaving]  = useState<SavingMap>({});
+  const [saved,   setSaved]   = useState<SavedMap>({});
+  const [editing, setEditing] = useState<EditingMap>({});
 
   const load = useCallback(async () => {
     if (students.length === 0) return;
@@ -34,17 +37,17 @@ export function ClassAbsencePanel({ students, term }: ClassAbsencePanelProps) {
     try {
       const list = await bulletinRemarksApi.getBatch(students.map(s => s.id), term);
       const map: RemarksMap = {};
-      // Initialiser tout le monde avec des valeurs vides
       for (const s of students) map[s.id] = EMPTY_REMARK(s.id, term);
-      // Écraser avec les vraies données si elles existent
-      for (const r of list) map[r.studentId] = r;
+      for (const r of list)     map[r.studentId] = r;
       setRemarks(map);
+      setDirty({});
+      setEditing({});
+      setSaved({});
     } finally {
       setLoading(false);
     }
   }, [students, term]);
 
-  // Charger à l'ouverture ou au changement de trimestre (si déjà ouvert)
   useEffect(() => { if (open) load(); }, [open, load]);
 
   const handleChange = (
@@ -52,28 +55,39 @@ export function ClassAbsencePanel({ students, term }: ClassAbsencePanelProps) {
     field: keyof Omit<BulletinRemark, 'studentId' | 'term'>,
     value: string,
   ) => {
-    const updated: BulletinRemark = { ...remarks[studentId], [field]: value };
-    setRemarks(prev => ({ ...prev, [studentId]: updated }));
-
-    // Debounce 700 ms — annule le précédent timer pour cet élève
-    clearTimeout(timers.current[studentId]);
-    timers.current[studentId] = setTimeout(async () => {
-      setSaving(prev => ({ ...prev, [studentId]: true }));
-      try {
-        await bulletinRemarksApi.save(studentId, term, {
-          observation:  updated.observation,
-          mention:      updated.mention,
-          absences:     updated.absences,
-          demiJournees: updated.demiJournees,
-          retards:      updated.retards,
-        });
-        setSaved(prev => ({ ...prev, [studentId]: true }));
-        setTimeout(() => setSaved(prev => ({ ...prev, [studentId]: false })), 2000);
-      } finally {
-        setSaving(prev => ({ ...prev, [studentId]: false }));
-      }
-    }, 700);
+    setRemarks(prev => ({ ...prev, [studentId]: { ...prev[studentId], [field]: value } }));
+    setDirty(prev => ({ ...prev, [studentId]: true }));
+    setSaved(prev => ({ ...prev, [studentId]: false }));
   };
+
+  const handleSave = async (studentId: string) => {
+    const r = remarks[studentId];
+    setSaving(prev => ({ ...prev, [studentId]: true }));
+    try {
+      await bulletinRemarksApi.save(studentId, term, {
+        observation:  r.observation,
+        mention:      r.mention,
+        absences:     r.absences,
+        demiJournees: r.demiJournees,
+        retards:      r.retards,
+      });
+      setDirty(prev =>   ({ ...prev, [studentId]: false }));
+      setSaved(prev =>   ({ ...prev, [studentId]: true }));
+      setEditing(prev => ({ ...prev, [studentId]: false }));
+      setTimeout(() => setSaved(prev => ({ ...prev, [studentId]: false })), 3000);
+    } finally {
+      setSaving(prev => ({ ...prev, [studentId]: false }));
+    }
+  };
+
+  const handleEdit = (studentId: string) => {
+    setEditing(prev => ({ ...prev, [studentId]: true }));
+    setSaved(prev =>   ({ ...prev, [studentId]: false }));
+  };
+
+  // Une ligne est en mode lecture si elle n'a jamais été modifiée ET n'est pas en édition
+  const isReadonly = (studentId: string) =>
+    !editing[studentId] && !dirty[studentId];
 
   return (
     <div className="bg-white rounded-xl shadow overflow-hidden">
@@ -101,9 +115,7 @@ export function ClassAbsencePanel({ students, term }: ClassAbsencePanelProps) {
       </button>
 
       {/* ── Corps ── */}
-      <div
-        className={`transition-all duration-300 overflow-hidden ${open ? 'max-h-[2000px]' : 'max-h-0'}`}
-      >
+      <div className={`transition-all duration-300 overflow-hidden ${open ? 'max-h-[2000px]' : 'max-h-0'}`}>
         <div className="border-t border-gray-100">
           {loading ? (
             <div className="flex items-center justify-center py-10 text-gray-400 gap-2">
@@ -118,34 +130,31 @@ export function ClassAbsencePanel({ students, term }: ClassAbsencePanelProps) {
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider min-w-[170px]">
                       Élève
                     </th>
-                    <th className="px-3 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider w-24">
+                    <th className="px-3 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider w-28">
                       Absences
                     </th>
                     <th className="px-3 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider w-32">
                       Demi-journées
                     </th>
-                    <th className="px-3 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider w-24">
+                    <th className="px-3 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider w-28">
                       Retards
                     </th>
-                    <th className="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-44">
-                      Mention
-                    </th>
-                    <th className="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                      Observation
-                    </th>
-                    <th className="px-3 py-3 w-8" />
+                    <th className="px-3 py-3 w-36" />
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
                   {students.map((student, i) => {
-                    const r = remarks[student.id];
+                    const r        = remarks[student.id];
                     if (!r) return null;
+                    const ro       = isReadonly(student.id);
                     const isSaving = saving[student.id];
                     const isSaved  = saved[student.id];
+                    const isDirty  = dirty[student.id];
+
                     return (
                       <tr
                         key={student.id}
-                        className={`transition-colors ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'} hover:bg-amber-50/40`}
+                        className={`transition-colors ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/40'} hover:bg-amber-50/30`}
                       >
                         {/* Nom */}
                         <td className="px-4 py-2.5">
@@ -157,68 +166,85 @@ export function ClassAbsencePanel({ students, term }: ClassAbsencePanelProps) {
 
                         {/* Absences */}
                         <td className="px-3 py-2.5">
-                          <input
-                            type="text"
-                            value={r.absences}
-                            onChange={e => handleChange(student.id, 'absences', e.target.value)}
-                            className="w-full text-center border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:ring-2 focus:ring-amber-400 focus:border-amber-400 outline-none transition"
-                            placeholder="0"
-                          />
+                          {ro ? (
+                            <p className="text-center text-sm text-gray-700 font-medium">
+                              {r.absences || <span className="text-gray-300">—</span>}
+                            </p>
+                          ) : (
+                            <input
+                              type="text"
+                              value={r.absences}
+                              onChange={e => handleChange(student.id, 'absences', e.target.value)}
+                              className="w-full text-center border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:ring-2 focus:ring-amber-400 focus:border-amber-400 outline-none transition"
+                              placeholder="0"
+                            />
+                          )}
                         </td>
 
                         {/* Demi-journées */}
                         <td className="px-3 py-2.5">
-                          <input
-                            type="text"
-                            value={r.demiJournees}
-                            onChange={e => handleChange(student.id, 'demiJournees', e.target.value)}
-                            className="w-full text-center border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:ring-2 focus:ring-amber-400 focus:border-amber-400 outline-none transition"
-                            placeholder="0"
-                          />
+                          {ro ? (
+                            <p className="text-center text-sm text-gray-700 font-medium">
+                              {r.demiJournees || <span className="text-gray-300">—</span>}
+                            </p>
+                          ) : (
+                            <input
+                              type="text"
+                              value={r.demiJournees}
+                              onChange={e => handleChange(student.id, 'demiJournees', e.target.value)}
+                              className="w-full text-center border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:ring-2 focus:ring-amber-400 focus:border-amber-400 outline-none transition"
+                              placeholder="0"
+                            />
+                          )}
                         </td>
 
                         {/* Retards */}
                         <td className="px-3 py-2.5">
-                          <input
-                            type="text"
-                            value={r.retards}
-                            onChange={e => handleChange(student.id, 'retards', e.target.value)}
-                            className="w-full text-center border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:ring-2 focus:ring-amber-400 focus:border-amber-400 outline-none transition"
-                            placeholder="0"
-                          />
+                          {ro ? (
+                            <p className="text-center text-sm text-gray-700 font-medium">
+                              {r.retards || <span className="text-gray-300">—</span>}
+                            </p>
+                          ) : (
+                            <input
+                              type="text"
+                              value={r.retards}
+                              onChange={e => handleChange(student.id, 'retards', e.target.value)}
+                              className="w-full text-center border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:ring-2 focus:ring-amber-400 focus:border-amber-400 outline-none transition"
+                              placeholder="0"
+                            />
+                          )}
                         </td>
 
-                        {/* Mention */}
-                        <td className="px-3 py-2.5">
-                          <select
-                            value={r.mention}
-                            onChange={e => handleChange(student.id, 'mention', e.target.value)}
-                            className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:ring-2 focus:ring-amber-400 focus:border-amber-400 outline-none bg-white transition"
-                          >
-                            {MENTIONS.map(m => (
-                              <option key={m} value={m}>{m || '—'}</option>
-                            ))}
-                          </select>
-                        </td>
-
-                        {/* Observation */}
-                        <td className="px-3 py-2.5">
-                          <input
-                            type="text"
-                            value={r.observation}
-                            onChange={e => handleChange(student.id, 'observation', e.target.value)}
-                            className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-amber-400 focus:border-amber-400 outline-none transition"
-                            placeholder="Observation…"
-                          />
-                        </td>
-
-                        {/* Statut sauvegarde */}
-                        <td className="px-3 py-2.5 text-center w-8">
+                        {/* Bouton Enregistrer / Modifier */}
+                        <td className="px-3 py-2.5 text-right">
                           {isSaving ? (
-                            <div className="w-4 h-4 border-2 border-amber-400 border-t-transparent rounded-full animate-spin mx-auto" />
-                          ) : isSaved ? (
-                            <CheckCircle size={16} className="text-green-500 mx-auto" />
-                          ) : null}
+                            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-amber-600">
+                              <div className="w-3.5 h-3.5 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
+                              Enregistrement…
+                            </div>
+                          ) : isSaved && !isDirty ? (
+                            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-green-600 font-medium">
+                              <CheckCircle size={14} />
+                              Enregistré
+                            </div>
+                          ) : ro ? (
+                            <button
+                              onClick={() => handleEdit(student.id)}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-50 transition-colors"
+                            >
+                              <Pencil size={13} />
+                              Modifier
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handleSave(student.id)}
+                              disabled={!isDirty}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-amber-500 hover:bg-amber-600 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                              <Save size={13} />
+                              Enregistrer
+                            </button>
+                          )}
                         </td>
                       </tr>
                     );
