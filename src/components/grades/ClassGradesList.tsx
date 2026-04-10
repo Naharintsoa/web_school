@@ -6,11 +6,12 @@
  * - Génération et impression du bulletin
  */
 import { useState, useEffect, useCallback } from 'react';
-import { Search, Printer, ArrowLeft, Settings2, Users, BookOpen, UserCircle, Calculator, Download, Upload } from 'lucide-react';
+import { Search, Printer, ArrowLeft, Settings2, Users, BookOpen, UserCircle, Download, Upload, PrinterCheck } from 'lucide-react';
 import { GradeInput } from './GradeInput';
 import { SubjectManager } from './SubjectManager';
 import { SubjectGradeEntry } from './SubjectGradeEntry';
 import { ReportCard } from './report-card/ReportCard';
+import { BulletinMultiPrint } from './BulletinMultiPrint';
 import { ClassCouncilView } from './ClassCouncilView';
 import { GradesImportModal } from './GradesImportModal';
 import { exportGrades } from '../../utils/gradesExportImport';
@@ -49,6 +50,8 @@ export function ClassGradesList({ grade, onBack }: ClassGradesListProps) {
   const [showSubjectManager, setShowSubjectManager] = useState(false);
   const [showCouncil, setShowCouncil] = useState(false);
   const [showImport, setShowImport] = useState(false);
+  const [showMultiPrint, setShowMultiPrint] = useState(false);
+  const [multiPrintGrades, setMultiPrintGrades] = useState<Grade[]>([]);
   const [entryMode, setEntryMode] = useState<'student' | 'subject'>('student');
 
   // Professeur principal de la classe
@@ -87,6 +90,17 @@ export function ClassGradesList({ grade, onBack }: ClassGradesListProps) {
     const classIds = new Set(allStudents.filter(s => s.grade === grade).map(s => s.id));
     setAllClassGrades(allGrades.filter(g => classIds.has(g.studentId) && g.term === selectedTerm));
   }, [grade, selectedTerm, currentYear, currentSchool]);
+
+  const handleMultiPrint = async () => {
+    // Charger toutes les notes de la classe (tous trimestres) pour le multi-print
+    const [allStudents, allGrades] = await Promise.all([
+      studentApi.getAll(currentYear, currentSchool),
+      gradesApi.getAll(),
+    ]);
+    const classIds = new Set(allStudents.filter(s => s.grade === grade).map(s => s.id));
+    setMultiPrintGrades(allGrades.filter(g => classIds.has(g.studentId)));
+    setShowMultiPrint(true);
+  };
 
   const handleSubjectsChange = async () => {
     const updated = await subjectsApi.getAll(currentSchool, grade);
@@ -202,6 +216,23 @@ export function ClassGradesList({ grade, onBack }: ClassGradesListProps) {
     );
   }
 
+  // Impression multiple (portal — déclenche window.print())
+  if (showMultiPrint) {
+    return (
+      <BulletinMultiPrint
+        students={students}
+        allGrades={multiPrintGrades}
+        subjects={subjects}
+        term={selectedTerm}
+        schoolYear={currentYear}
+        teacherName={principalTeacher}
+        classStats={getClassStats()}
+        classAverage={calculateAverage(allClassGrades)}
+        onDone={() => setShowMultiPrint(false)}
+      />
+    );
+  }
+
   return (
     <div className="space-y-4">
       {/* En-tête */}
@@ -265,6 +296,14 @@ export function ClassGradesList({ grade, onBack }: ClassGradesListProps) {
             >
               <Settings2 size={16} />
               <span className="hidden sm:inline">Gérer les matières</span>
+            </button>
+            <button
+              onClick={handleMultiPrint}
+              title="Imprimer tous les bulletins de la classe"
+              className="flex items-center gap-2 px-3 py-2 text-sm text-violet-700 border border-violet-300 rounded-lg hover:bg-violet-50"
+            >
+              <PrinterCheck size={16} />
+              <span className="hidden sm:inline">Bulletins multiples</span>
             </button>
             <button
               onClick={() => setShowCouncil(true)}
