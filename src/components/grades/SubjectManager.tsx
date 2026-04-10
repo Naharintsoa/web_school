@@ -1,10 +1,9 @@
 /**
- * Gestionnaire de matières.
- * Permet d'ajouter, modifier et supprimer les matières dans la liste des notes.
- * Les modifications sont persistées via subjectsApi (localStorage).
+ * Gestionnaire de matières avec drag-and-drop pour réordonner.
+ * L'ordre est sauvegardé via subjectsApi.reorder() → display_order en base.
  */
-import React, { useState } from 'react';
-import { Plus, Trash2, Edit2, Save, X, BookOpen } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { Plus, Trash2, Edit2, Save, X, BookOpen, GripVertical } from 'lucide-react';
 import type { Subject } from '../../types';
 import { subjectsApi } from '../../services/api/subjectsApi';
 import { useToast } from '../../contexts/ToastContext';
@@ -29,12 +28,59 @@ export function SubjectManager({ subjects, onSubjectsChange, onClose, grade, sch
   const [newCoeff, setNewCoeff] = useState(1);
   const [newTeacher, setNewTeacher] = useState('');
 
-  // --- Ajout ---
-  const handleAdd = async () => {
-    if (!newName.trim()) {
-      showToast('Le nom de la matière est requis', 'error');
-      return;
+  // ── Drag & drop state ──────────────────────────────────────────────────────
+  const [localOrder, setLocalOrder] = useState<Subject[]>(subjects);
+  const [dragIdx, setDragIdx] = useState<number | null>(null);
+  const [overIdx, setOverIdx] = useState<number | null>(null);
+  const [saving, setSaving] = useState(false);
+  const dragNode = useRef<HTMLDivElement | null>(null);
+
+  // Sync si subjects change depuis l'extérieur (ajout/suppression)
+  React.useEffect(() => { setLocalOrder(subjects); }, [subjects]);
+
+  // ── Handlers drag & drop ───────────────────────────────────────────────────
+  const onDragStart = (e: React.DragEvent, idx: number) => {
+    dragNode.current = e.currentTarget as HTMLDivElement;
+    setDragIdx(idx);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const onDragOver = (e: React.DragEvent, idx: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (idx !== overIdx) setOverIdx(idx);
+  };
+
+  const onDrop = (e: React.DragEvent, idx: number) => {
+    e.preventDefault();
+    if (dragIdx === null || dragIdx === idx) { resetDrag(); return; }
+    const next = [...localOrder];
+    const [moved] = next.splice(dragIdx, 1);
+    next.splice(idx, 0, moved);
+    setLocalOrder(next);
+    resetDrag();
+  };
+
+  const onDragEnd = () => resetDrag();
+
+  const resetDrag = () => { setDragIdx(null); setOverIdx(null); };
+
+  const handleSaveOrder = async () => {
+    setSaving(true);
+    try {
+      await subjectsApi.reorder(localOrder.map(s => s.id));
+      onSubjectsChange();
+      showToast('Ordre des matières enregistré', 'success');
+    } finally {
+      setSaving(false);
     }
+  };
+
+  const orderChanged = localOrder.map(s => s.id).join() !== subjects.map(s => s.id).join();
+
+  // ── Ajout ──────────────────────────────────────────────────────────────────
+  const handleAdd = async () => {
+    if (!newName.trim()) { showToast('Le nom de la matière est requis', 'error'); return; }
     await subjectsApi.create({
       name: newName.trim().toUpperCase(),
       coefficient: Math.max(1, newCoeff),
@@ -42,15 +88,12 @@ export function SubjectManager({ subjects, onSubjectsChange, onClose, grade, sch
       school,
       grade,
     });
-    setNewName('');
-    setNewCoeff(1);
-    setNewTeacher('');
-    setShowAddForm(false);
+    setNewName(''); setNewCoeff(1); setNewTeacher(''); setShowAddForm(false);
     onSubjectsChange();
     showToast('Matière ajoutée', 'success');
   };
 
-  // --- Édition ---
+  // ── Édition ────────────────────────────────────────────────────────────────
   const startEdit = (subject: Subject) => {
     setEditingId(subject.id);
     setEditName(subject.name);
@@ -74,7 +117,7 @@ export function SubjectManager({ subjects, onSubjectsChange, onClose, grade, sch
     showToast('Matière mise à jour', 'success');
   };
 
-  // --- Suppression ---
+  // ── Suppression ────────────────────────────────────────────────────────────
   const handleDelete = async (subject: Subject) => {
     if (!window.confirm(
       `Supprimer la matière "${subject.name}" ?\n\nAttention : les notes associées resteront dans la base mais ne seront plus affichées.`
@@ -104,17 +147,46 @@ export function SubjectManager({ subjects, onSubjectsChange, onClose, grade, sch
 
         {/* Info */}
         <div className="mx-5 mt-4 p-3 bg-blue-50 border border-blue-100 rounded-lg text-xs text-blue-700">
-          Les matières ajoutées ici sont propres à la classe <strong>{grade}</strong>. Les notes saisies pour une matière supprimée ne sont pas perdues.
+          Glissez-déposez les matières pour changer leur ordre dans le bulletin.
+          Les matières ajoutées sont propres à la classe <strong>{grade}</strong>.
         </div>
 
-        {/* Liste des matières */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-2">
-          {subjects.length === 0 && (
+        {/* Bouton Enregistrer l'ordre (visible seulement si ordre modifié) */}
+        {orderChanged && (
+          <div className="mx-5 mt-3">
+            <button
+              onClick={handleSaveOrder}
+              disabled={saving}
+              className="w-full py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-60 flex items-center justify-center gap-2"
+            >
+              <Save size={14} />
+              {saving ? 'Enregistrement…' : 'Enregistrer l\'ordre'}
+            </button>
+          </div>
+        )}
+
+        {/* Liste des matières (drag & drop) */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-1.5">
+          {localOrder.length === 0 && (
             <p className="text-center text-gray-400 py-8">Aucune matière. Ajoutez-en une ci-dessous.</p>
           )}
 
-          {subjects.map(subject => (
-            <div key={subject.id} className="border border-gray-200 rounded-lg overflow-hidden">
+          {localOrder.map((subject, idx) => (
+            <div
+              key={subject.id}
+              draggable={editingId !== subject.id}
+              onDragStart={e => onDragStart(e, idx)}
+              onDragOver={e => onDragOver(e, idx)}
+              onDrop={e => onDrop(e, idx)}
+              onDragEnd={onDragEnd}
+              className={`border rounded-lg overflow-hidden transition-all ${
+                dragIdx === idx
+                  ? 'opacity-40 border-indigo-300 bg-indigo-50'
+                  : overIdx === idx
+                  ? 'border-indigo-400 shadow-md ring-2 ring-indigo-200'
+                  : 'border-gray-200'
+              }`}
+            >
               {editingId === subject.id ? (
                 /* Mode édition */
                 <div className="p-3 bg-indigo-50 space-y-2">
@@ -157,7 +229,18 @@ export function SubjectManager({ subjects, onSubjectsChange, onClose, grade, sch
                 </div>
               ) : (
                 /* Mode affichage */
-                <div className="flex items-center px-4 py-3 hover:bg-gray-50">
+                <div className="flex items-center px-3 py-3 hover:bg-gray-50 cursor-default">
+                  {/* Poignée de drag */}
+                  <div
+                    className="flex-shrink-0 cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 mr-2 touch-none"
+                    title="Glisser pour réordonner"
+                  >
+                    <GripVertical size={18} />
+                  </div>
+                  {/* Numéro d'ordre */}
+                  <span className="text-xs text-gray-400 font-mono w-5 text-center mr-2 flex-shrink-0">
+                    {idx + 1}
+                  </span>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-semibold text-gray-800 truncate">{subject.name}</span>
@@ -169,7 +252,7 @@ export function SubjectManager({ subjects, onSubjectsChange, onClose, grade, sch
                       <p className="text-xs text-gray-500 mt-0.5 truncate">{subject.teacherName}</p>
                     )}
                   </div>
-                  <div className="flex items-center gap-1 ml-3">
+                  <div className="flex items-center gap-1 ml-2">
                     <button
                       onClick={() => startEdit(subject)}
                       className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-md"
