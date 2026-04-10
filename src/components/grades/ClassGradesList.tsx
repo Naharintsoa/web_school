@@ -6,7 +6,7 @@
  * - Génération et impression du bulletin
  */
 import { useState, useEffect, useCallback } from 'react';
-import { Search, Printer, ArrowLeft, Settings2, Users, BookOpen, UserCircle, Download, Upload, PrinterCheck } from 'lucide-react';
+import { Search, Printer, ArrowLeft, Settings2, Users, BookOpen, UserCircle, Download, Upload } from 'lucide-react';
 import { GradeInput } from './GradeInput';
 import { SubjectManager } from './SubjectManager';
 import { SubjectGradeEntry } from './SubjectGradeEntry';
@@ -302,7 +302,7 @@ export function ClassGradesList({ grade, onBack }: ClassGradesListProps) {
               title="Imprimer tous les bulletins de la classe"
               className="flex items-center gap-2 px-3 py-2 text-sm text-violet-700 border border-violet-300 rounded-lg hover:bg-violet-50"
             >
-              <PrinterCheck size={16} />
+              <Printer size={16} />
               <span className="hidden sm:inline">Bulletins multiples</span>
             </button>
             <button
