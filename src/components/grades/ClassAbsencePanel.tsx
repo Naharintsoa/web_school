@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { ChevronDown, Clock, Save, Pencil, CheckCircle } from 'lucide-react';
+import { ChevronDown, Clock, Save, Pencil } from 'lucide-react';
 import { bulletinRemarksApi, type BulletinRemark } from '../../services/api/bulletinRemarksApi';
 import type { Student } from '../../types';
 
@@ -18,9 +18,9 @@ export function ClassAbsencePanel({ students, term }: ClassAbsencePanelProps) {
   const [open,    setOpen]    = useState(false);
   const [remarks, setRemarks] = useState<RemarksMap>({});
   const [loading, setLoading] = useState(false);
-  const [dirty,   setDirty]   = useState<Record<string, boolean>>({});
-  const [saving,  setSaving]  = useState<Record<string, boolean>>({});
-  const [saved,   setSaved]   = useState<Record<string, boolean>>({});
+  const [dirty,   setDirty]   = useState(false);
+  const [saving,  setSaving]  = useState(false);
+  const [saved,   setSaved]   = useState(false);
 
   const load = useCallback(async () => {
     if (students.length === 0) return;
@@ -31,8 +31,8 @@ export function ClassAbsencePanel({ students, term }: ClassAbsencePanelProps) {
       for (const s of students) map[s.id] = EMPTY(s.id, term);
       for (const r of list)     map[r.studentId] = r;
       setRemarks(map);
-      setDirty({});
-      setSaved({});
+      setDirty(false);
+      setSaved(false);
     } finally {
       setLoading(false);
     }
@@ -46,36 +46,40 @@ export function ClassAbsencePanel({ students, term }: ClassAbsencePanelProps) {
     value: string,
   ) => {
     setRemarks(prev => ({ ...prev, [studentId]: { ...prev[studentId], [field]: value } }));
-    setDirty(prev  => ({ ...prev, [studentId]: true }));
-    setSaved(prev  => ({ ...prev, [studentId]: false }));
+    setDirty(true);
+    setSaved(false);
   };
 
-  const handleSave = async (studentId: string) => {
-    const r = remarks[studentId];
-    setSaving(prev => ({ ...prev, [studentId]: true }));
+  const handleSaveAll = async () => {
+    setSaving(true);
     try {
-      await bulletinRemarksApi.save(studentId, term, {
-        observation: r.observation, mention: r.mention,
-        absences: r.absences, demiJournees: r.demiJournees, retards: r.retards,
-      });
-      setDirty(prev  => ({ ...prev, [studentId]: false }));
-      setSaved(prev  => ({ ...prev, [studentId]: true }));
-      setTimeout(() => setSaved(prev => ({ ...prev, [studentId]: false })), 3000);
+      await Promise.all(
+        students.map(s => {
+          const r = remarks[s.id];
+          if (!r) return Promise.resolve();
+          return bulletinRemarksApi.save(s.id, term, {
+            observation: r.observation, mention: r.mention,
+            absences: r.absences, demiJournees: r.demiJournees, retards: r.retards,
+          });
+        })
+      );
+      setDirty(false);
+      setSaved(true);
     } finally {
-      setSaving(prev => ({ ...prev, [studentId]: false }));
+      setSaving(false);
     }
   };
 
   return (
     <div className="bg-white rounded-xl shadow overflow-hidden">
 
-      {/* En-tête accordéon */}
-      <button
-        onClick={() => setOpen(v => !v)}
-        className="w-full flex items-center justify-between px-5 py-4 hover:bg-gray-50 transition-colors group"
-      >
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-amber-100 rounded-lg group-hover:bg-amber-200 transition-colors">
+      {/* En-tête accordéon + bouton unique */}
+      <div className="flex items-center justify-between px-5 py-4">
+        <button
+          onClick={() => setOpen(v => !v)}
+          className="flex items-center gap-3 flex-1 hover:opacity-80 transition-opacity"
+        >
+          <div className="p-2 bg-amber-100 rounded-lg">
             <Clock className="text-amber-600" size={18} />
           </div>
           <div className="text-left">
@@ -84,12 +88,42 @@ export function ClassAbsencePanel({ students, term }: ClassAbsencePanelProps) {
               Trimestre {term} — {students.length} élève{students.length > 1 ? 's' : ''}
             </p>
           </div>
-        </div>
-        <ChevronDown
-          size={20}
-          className={`text-gray-400 transition-transform duration-300 ${open ? 'rotate-180' : ''}`}
-        />
-      </button>
+          <ChevronDown
+            size={20}
+            className={`text-gray-400 transition-transform duration-300 ml-2 ${open ? 'rotate-180' : ''}`}
+          />
+        </button>
+
+        {/* Bouton Enregistrer / Modifier — visible seulement si l'accordéon est ouvert */}
+        {open && !loading && (
+          <button
+            onClick={saved && !dirty ? () => { setSaved(false); setDirty(false); } : handleSaveAll}
+            disabled={saving || (!dirty && !saved)}
+            className={`ml-4 inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+              saved && !dirty
+                ? 'text-indigo-600 border border-indigo-200 bg-white hover:bg-indigo-50'
+                : 'text-white bg-amber-500 hover:bg-amber-600'
+            }`}
+          >
+            {saving ? (
+              <>
+                <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                Enregistrement…
+              </>
+            ) : saved && !dirty ? (
+              <>
+                <Pencil size={14} />
+                Modifier
+              </>
+            ) : (
+              <>
+                <Save size={14} />
+                Enregistrer
+              </>
+            )}
+          </button>
+        )}
+      </div>
 
       {/* Corps */}
       <div className={`transition-all duration-300 overflow-hidden ${open ? 'max-h-[2000px]' : 'max-h-0'}`}>
@@ -108,27 +142,18 @@ export function ClassAbsencePanel({ students, term }: ClassAbsencePanelProps) {
                     <th className="px-3 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider w-28">Absences</th>
                     <th className="px-3 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider w-32">Demi-journées</th>
                     <th className="px-3 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider w-28">Retards</th>
-                    <th className="px-3 py-3 w-36" />
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
                   {students.map((student, i) => {
                     const r = remarks[student.id];
                     if (!r) return null;
-                    const isDirty  = dirty[student.id];
-                    const isSaving = saving[student.id];
-                    const isSaved  = saved[student.id];
-
                     return (
                       <tr key={student.id} className={`transition-colors ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/40'} hover:bg-amber-50/30`}>
-
-                        {/* Nom */}
                         <td className="px-4 py-2.5">
                           <p className="font-medium text-gray-900 text-sm leading-tight">{student.lastName} {student.firstName}</p>
                           <p className="text-xs text-gray-400">N°{student.studentNumber}</p>
                         </td>
-
-                        {/* Absences */}
                         <td className="px-3 py-2.5">
                           <input
                             type="text"
@@ -138,8 +163,6 @@ export function ClassAbsencePanel({ students, term }: ClassAbsencePanelProps) {
                             placeholder="0"
                           />
                         </td>
-
-                        {/* Demi-journées */}
                         <td className="px-3 py-2.5">
                           <input
                             type="text"
@@ -149,8 +172,6 @@ export function ClassAbsencePanel({ students, term }: ClassAbsencePanelProps) {
                             placeholder="0"
                           />
                         </td>
-
-                        {/* Retards */}
                         <td className="px-3 py-2.5">
                           <input
                             type="text"
@@ -159,33 +180,6 @@ export function ClassAbsencePanel({ students, term }: ClassAbsencePanelProps) {
                             className="w-full text-center border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:ring-2 focus:ring-amber-400 focus:border-amber-400 outline-none transition"
                             placeholder="0"
                           />
-                        </td>
-
-                        {/* Bouton unique */}
-                        <td className="px-3 py-2.5 text-right">
-                          {isSaving ? (
-                            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-amber-600">
-                              <div className="w-3.5 h-3.5 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
-                              Enregistrement…
-                            </div>
-                          ) : isSaved && !isDirty ? (
-                            <button
-                              onClick={() => handleSave(student.id)}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-50 transition-colors"
-                            >
-                              <Pencil size={13} />
-                              Modifier
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => handleSave(student.id)}
-                              disabled={!isDirty}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-amber-500 hover:bg-amber-600 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                            >
-                              <Save size={13} />
-                              Enregistrer
-                            </button>
-                          )}
                         </td>
                       </tr>
                     );
