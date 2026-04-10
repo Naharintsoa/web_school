@@ -228,7 +228,7 @@ export async function initDB() {
       { id: 'sully-1',  name: 'MATHEMATIQUES',              coefficient: 1,  teacher: 'ANDRIANIRINA N. Micah' },
       { id: 'sully-2',  name: 'TECHNOLOGIE',                coefficient: 1,  teacher: 'ANDRIANIRINA N. Micah' },
       { id: 'sully-3',  name: 'PHYSIQUE CHIMIE',             coefficient: 1,  teacher: 'ANDRIANIRINA N. Micah' },
-      { id: 'sully-4',  name: 'HISTOIRE GEOGRAPHIE/ E.M.C', coefficient: 1,  teacher: 'TAMARENA Hermann' },
+      // HISTOIRE GEOGRAPHIE / E.M.C géré séparément par classe ci-dessous (6EME/5EME séparés, 3EME/4EME combinés)
       { id: 'sully-5',  name: 'ANGLAIS',                    coefficient: 1,  teacher: "RAVELOMANANTSOA Mioran'i Avo" },
       { id: 'sully-6',  name: 'ARTS PLASTIQUES',            coefficient: 1,  teacher: 'RAZAFINIMANANA Solofotiana' },
       { id: 'sully-7',  name: 'EPS',                        coefficient: 1,  teacher: 'ANDRIAMANORO Tahiry' },
@@ -318,6 +318,44 @@ export async function initDB() {
            SET teacher_name = EXCLUDED.teacher_name,
                grade        = EXCLUDED.grade`,
         [id, teacher, grade]
+      );
+    }
+
+    // ─── HISTOIRE GEOGRAPHIE / E.M.C : séparés en 6EME et 5EME ─────────────
+    // En 6EME et 5EME : deux matières distinctes (HISTOIRE GEOGRAPHIE + E.M.C)
+    // En 3EME et 4EME : matière combinée (HISTOIRE GEOGRAPHIE/ E.M.C)
+    // Supprimer l'entrée générique (grade=NULL) pour éviter qu'elle s'affiche partout
+    await client.query(
+      `DELETE FROM subjects
+       WHERE school = 'sully'
+         AND UPPER(TRIM(name)) = 'HISTOIRE GEOGRAPHIE/ E.M.C'
+         AND id NOT IN (
+           'sully-hg-emc-3eme', 'sully-hg-emc-4eme',
+           'sully-hg-6eme', 'sully-emc-6eme',
+           'sully-hg-5eme', 'sully-emc-5eme'
+         )`
+    );
+
+    const hgEmcEntries = [
+      // Combiné pour 3EME et 4EME
+      { id: 'sully-hg-emc-3eme', name: 'HISTOIRE GEOGRAPHIE/ E.M.C', grade: '3EME', teacher: 'TAMARENA Hermann' },
+      { id: 'sully-hg-emc-4eme', name: 'HISTOIRE GEOGRAPHIE/ E.M.C', grade: '4EME', teacher: 'TAMARENA Hermann' },
+      // Séparés pour 6EME
+      { id: 'sully-hg-6eme',  name: 'HISTOIRE GEOGRAPHIE', grade: '6EME', teacher: 'TAMARENA Hermann' },
+      { id: 'sully-emc-6eme', name: 'E.M.C',               grade: '6EME', teacher: 'TAMARENA Hermann' },
+      // Séparés pour 5EME
+      { id: 'sully-hg-5eme',  name: 'HISTOIRE GEOGRAPHIE', grade: '5EME', teacher: 'TAMARENA Hermann' },
+      { id: 'sully-emc-5eme', name: 'E.M.C',               grade: '5EME', teacher: 'TAMARENA Hermann' },
+    ];
+    for (const { id, name, grade, teacher } of hgEmcEntries) {
+      await client.query(
+        `INSERT INTO subjects (id, name, coefficient, teacher_name, school, grade)
+         VALUES ($1, $2, 1, $3, 'sully', $4)
+         ON CONFLICT (id) DO UPDATE
+           SET teacher_name = EXCLUDED.teacher_name,
+               grade        = EXCLUDED.grade,
+               name         = EXCLUDED.name`,
+        [id, name, teacher, grade]
       );
     }
 
