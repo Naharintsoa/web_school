@@ -209,6 +209,21 @@ export async function initDB() {
       console.log('Super admin créé.');
     }
 
+    // 4a. Table bulletin_remarks (observations, absences, retards par élève et trimestre)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS bulletin_remarks (
+        student_id    TEXT NOT NULL,
+        term          SMALLINT NOT NULL CHECK (term IN (1, 2, 3)),
+        observation   TEXT NOT NULL DEFAULT '',
+        mention       TEXT NOT NULL DEFAULT '',
+        absences      TEXT NOT NULL DEFAULT '',
+        demi_journees TEXT NOT NULL DEFAULT '',
+        retards       TEXT NOT NULL DEFAULT '',
+        updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        PRIMARY KEY (student_id, term)
+      )
+    `);
+
     // 4b. Table subjects + colonne school
     await client.query(`
       CREATE TABLE IF NOT EXISTS subjects (
