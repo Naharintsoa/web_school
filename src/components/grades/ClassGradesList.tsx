@@ -6,7 +6,7 @@
  * - Génération et impression du bulletin
  */
 import { useState, useEffect, useCallback } from 'react';
-import { Search, Printer, ArrowLeft, Settings2, Users, BookOpen, UserCircle, Download, Upload } from 'lucide-react';
+import { Search, Printer, ArrowLeft, Settings2, Users, BookOpen, UserCircle, Calculator, Download, Upload } from 'lucide-react';
 import { GradeInput } from './GradeInput';
 import { SubjectManager } from './SubjectManager';
 import { SubjectGradeEntry } from './SubjectGradeEntry';
