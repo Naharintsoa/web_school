@@ -3,12 +3,13 @@
  * aux notes, et au hub Documents (badges, cartes d'identité, certificats).
  */
 import React, { useState, useRef, useEffect } from 'react';
-import { Users, ChevronDown, BookOpen, Printer } from 'lucide-react';
+import { Users, ChevronDown, BookOpen, Printer, Pencil, Save, X } from 'lucide-react';
 import type { Student } from '../../types';
 import type { ClassLevel } from '../../types/student';
 import { ClassStudentsList } from './ClassStudentsList';
 import { ClassDocumentsHub } from './documents/ClassDocumentsHub';
 import { studentApi } from '../../services/api';
+import { classTeachersApi } from '../../services/api/classTeachersApi';
 import { useNavigation } from '../../contexts/NavigationContext';
 import { useSchoolYear } from '../../contexts/SchoolYearContext';
 import { useSchool } from '../../contexts/SchoolContext';
@@ -31,6 +32,39 @@ export function ClassCard({ grade, totalStudents, teachers, isSelected, onSelect
   const [showDocumentsHub, setShowDocumentsHub] = useState(false);
   const [students, setStudents] = useState<Student[]>([]);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  // Professeur principal — chargé depuis la base, éditable
+  const [principalTeacher, setPrincipalTeacher] = useState('');
+  const [editingTeacher, setEditingTeacher] = useState(false);
+  const [editTeacherVal, setEditTeacherVal] = useState('');
+  const [savingTeacher, setSavingTeacher] = useState(false);
+
+  useEffect(() => {
+    classTeachersApi.get(currentSchool, grade).then(name => {
+      if (name) setPrincipalTeacher(name);
+    });
+  }, [currentSchool, grade]);
+
+  const startEditTeacher = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditTeacherVal(principalTeacher);
+    setEditingTeacher(true);
+  };
+  const cancelEditTeacher = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingTeacher(false);
+  };
+  const saveTeacher = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSavingTeacher(true);
+    try {
+      await classTeachersApi.update(currentSchool, grade, editTeacherVal.trim());
+      setPrincipalTeacher(editTeacherVal.trim());
+      setEditingTeacher(false);
+    } finally {
+      setSavingTeacher(false);
+    }
+  };
 
   // Fermer le menu si clic en dehors
   useEffect(() => {
@@ -153,14 +187,51 @@ export function ClassCard({ grade, totalStudents, teachers, isSelected, onSelect
 
             <div className="space-y-1">
               <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                {isCollege ? FR.classes.classTeacher : FR.classes.classTeachers}
+                {FR.classes.classTeacher}
               </p>
-              {Array.isArray(teachers) ? (
-                teachers.slice(0, 3).map((teacher, i) => (
-                  <p key={i} className="text-sm text-gray-600 pl-1">• {teacher}</p>
-                ))
+              {editingTeacher ? (
+                <div className="flex items-center gap-1.5" onClick={e => e.stopPropagation()}>
+                  <input
+                    type="text"
+                    value={editTeacherVal}
+                    onChange={e => setEditTeacherVal(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') saveTeacher(e as unknown as React.MouseEvent);
+                      if (e.key === 'Escape') cancelEditTeacher(e as unknown as React.MouseEvent);
+                    }}
+                    autoFocus
+                    className="text-xs border border-indigo-300 rounded px-2 py-1 focus:ring-1 focus:ring-indigo-500 focus:border-transparent flex-1 min-w-0"
+                    placeholder="Nom du professeur principal"
+                  />
+                  <button
+                    onClick={saveTeacher}
+                    disabled={savingTeacher}
+                    className="p-1 text-indigo-600 hover:text-indigo-800 disabled:opacity-50 shrink-0"
+                    title="Enregistrer"
+                  >
+                    <Save size={14} />
+                  </button>
+                  <button
+                    onClick={cancelEditTeacher}
+                    className="p-1 text-gray-400 hover:text-gray-600 shrink-0"
+                    title="Annuler"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
               ) : (
-                <p className="text-sm text-gray-600 pl-1">• {teachers}</p>
+                <div className="flex items-center gap-1.5">
+                  <p className="text-sm text-gray-600 pl-1 flex-1">
+                    {principalTeacher ? `• ${principalTeacher}` : <span className="text-gray-400 italic text-xs">Non renseigné</span>}
+                  </p>
+                  <button
+                    onClick={startEditTeacher}
+                    className="p-0.5 text-gray-300 hover:text-indigo-500 transition-colors shrink-0"
+                    title="Modifier le professeur principal"
+                  >
+                    <Pencil size={12} />
+                  </button>
+                </div>
               )}
             </div>
           </div>
