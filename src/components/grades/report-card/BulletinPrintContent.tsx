@@ -35,19 +35,34 @@ const S = {
   header: { padding: '3px', border: '1px solid #000', background: '#d9d9d9', fontWeight: 'bold' as const, textAlign: 'center' as const, fontSize: '8pt', verticalAlign: 'bottom' as const },
 };
 
+/** Matières masquées sur le bulletin si l'élève n'a pas de note (optionnelles ou spécifiques à certaines classes) */
+const HIDE_IF_NO_STUDENT_GRADE = ['anglais', 'espagnol', 'allemand'];
+/** Physique chimie est optionnelle en 6EME (pas enseignée systématiquement) */
+const is6eme = (grade: string) => /6.?me/i.test(grade);
+
 export function BulletinPrintContent({
   student, grades, subjects, classStats, term, schoolYear,
   classAverage, teacherName, otherTermsAverages,
   observation = '', mention = '', absences = '', demiJournees = '', retards = '',
 }: BulletinPrintContentProps) {
+  const studentGradeClass = student.grade?.trim() ?? '';
+
   const displayRows = subjects
     .filter(s => {
-      // Toujours masquer si pas de note élève ET pas de stats de classe (cours pas eu lieu)
+      const nameLower = s.name.toLowerCase();
       const hasStudentGrade = grades.some(g => g.subjectId === s.id);
+
+      // Matières masquées si pas de note élève (langues optionnelles + physique chimie en 6EME)
+      const isHiddenIfNoGrade =
+        HIDE_IF_NO_STUDENT_GRADE.some(k => nameLower.includes(k)) ||
+        (nameLower.includes('physique') && is6eme(studentGradeClass));
+
+      if (isHiddenIfNoGrade) return hasStudentGrade;
+
+      // Autres matières : masquées seulement si aucune note élève ET aucune stat de classe
       const stats = classStats[s.id];
       const hasClassGrade = stats && (stats.avg > 0 || stats.min > 0 || stats.max > 0);
-      if (!hasStudentGrade && !hasClassGrade) return false;
-      return true;
+      return hasStudentGrade || hasClassGrade;
     })
     .map(s => ({ subject: s, grade: grades.find(g => g.subjectId === s.id) ?? null }));
 
