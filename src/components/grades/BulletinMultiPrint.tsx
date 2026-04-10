@@ -2,9 +2,10 @@
  * BulletinMultiPrint — impression de tous les bulletins d'une classe.
  * 1 bulletin par page A4. Déclenche window.print() via un portal React.
  */
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { BulletinPrintContent } from './report-card/BulletinPrintContent';
+import { bulletinRemarksApi, type BulletinRemark } from '../../services/api/bulletinRemarksApi';
 import { calculateAverage, getMentionFromAverage } from '../../utils/grades';
 import type { Student } from '../../types/student';
 import type { Grade } from '../../types/grade';
@@ -12,13 +13,11 @@ import type { Subject } from '../../types/subject';
 
 interface BulletinMultiPrintProps {
   students: Student[];
-  /** Toutes les notes de la classe (tous trimestres) */
   allGrades: Grade[];
   subjects: Subject[];
   term: 1 | 2 | 3;
   schoolYear: string;
   teacherName: string;
-  /** Stats de classe par subjectId (trimestre courant) */
   classStats: Record<string, { avg: number; min: number; max: number }>;
   classAverage: number;
   onDone: () => void;
@@ -29,8 +28,24 @@ export function BulletinMultiPrint({
   teacherName, classStats, classAverage, onDone,
 }: BulletinMultiPrintProps) {
 
+  const [remarks, setRemarks] = useState<Record<string, BulletinRemark> | null>(null);
+
+  // 1. Charger les absences/retards/observations de tous les élèves
   useEffect(() => {
-    // Attendre que les images (logo) soient chargées avant d'imprimer
+    bulletinRemarksApi
+      .getBatch(students.map(s => s.id), term)
+      .then(list => {
+        const map: Record<string, BulletinRemark> = {};
+        for (const r of list) map[r.studentId] = r;
+        setRemarks(map);
+      })
+      .catch(() => setRemarks({})); // en cas d'erreur, on continue sans données
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 2. Imprimer seulement quand les remarques sont chargées
+  useEffect(() => {
+    if (remarks === null) return; // pas encore chargé
+
     const waitForImages = () => {
       const portal = document.querySelector('.bulletin-multi-portal');
       if (!portal) { window.print(); onDone(); return; }
@@ -51,7 +66,10 @@ export function BulletinMultiPrint({
 
     const timer = setTimeout(waitForImages, 150);
     return () => clearTimeout(timer);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [remarks]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Tant que les remarques ne sont pas chargées, ne pas rendre le portal
+  if (remarks === null) return null;
 
   return createPortal(
     <div className="bulletin-multi-portal">
@@ -68,7 +86,12 @@ export function BulletinMultiPrint({
           }))
           .filter(t => t.average > 0);
 
-        const mention = getMentionFromAverage(calculateAverage(termGrades));
+        const r = remarks[student.id];
+        const mention     = r?.mention     || getMentionFromAverage(calculateAverage(termGrades));
+        const observation = r?.observation || '';
+        const absences    = r?.absences    || '';
+        const demiJournees = r?.demiJournees || '';
+        const retards     = r?.retards     || '';
 
         return (
           <div key={student.id} className="bulletin-page">
@@ -83,13 +106,16 @@ export function BulletinMultiPrint({
               teacherName={teacherName}
               otherTermsAverages={otherTermsAverages}
               mention={mention}
+              observation={observation}
+              absences={absences}
+              demiJournees={demiJournees}
+              retards={retards}
             />
           </div>
         );
       })}
 
       <style>{`
-        /* ── Invisible à l'écran ── */
         .bulletin-multi-portal {
           position: fixed;
           top: -99999px;
@@ -99,7 +125,6 @@ export function BulletinMultiPrint({
         }
 
         @media print {
-          /* Masquer tout sauf le portal */
           body > *:not(.bulletin-multi-portal) { display: none !important; }
 
           .bulletin-multi-portal {
@@ -109,7 +134,6 @@ export function BulletinMultiPrint({
             display: block !important;
           }
 
-          /* Une page par bulletin */
           .bulletin-page {
             page-break-after: always;
             break-after: page;
@@ -122,7 +146,6 @@ export function BulletinMultiPrint({
             break-after: avoid;
           }
 
-          /* Forcer couleurs et images */
           .bulletin-page img {
             display: block !important;
             -webkit-print-color-adjust: exact !important;
