@@ -9,7 +9,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import type { Student } from '../../types/student';
 import type { Subject } from '../../types/subject';
 import type { Grade } from '../../types/grade';
-import { getGradeLevel } from '../../utils/grades';
+import { getGradeLevel, formatScore } from '../../utils/grades';
 
 export interface StudentSlide {
   student: Student;
@@ -57,7 +57,7 @@ const medalEmoji = (r: number) => r === 1 ? '🥇' : r === 2 ? '🥈' : r === 3 
 function TrendBadge({ prev, curr }: { prev: number; curr: number }) {
   if (prev <= 0 || curr <= 0) return null;
   const diff = curr - prev;
-  const abs = Math.abs(diff).toFixed(2);
+  const abs = formatScore(Math.abs(diff));
   if (diff > 0.05)  return <span style={tw.trendUp}><TrendingUp size={18} /> +{abs}</span>;
   if (diff < -0.05) return <span style={tw.trendDown}><TrendingDown size={18} /> -{abs}</span>;
   return <span style={tw.trendEq}><Minus size={18} /> stable</span>;
@@ -385,13 +385,13 @@ export function CouncilDiapo({
             <div style={tw.avgLabel}>Moyenne trimestrielle</div>
             <div style={tw.avgRow}>
               {term >= 2 && avg1 > 0 && (
-                <span className="diapo-prevavg" style={tw.prevAvg}>{termLabel(1)}&nbsp;: {avg1.toFixed(2)}</span>
+                <span className="diapo-prevavg" style={tw.prevAvg}>{termLabel(1)}&nbsp;: {formatScore(avg1)}</span>
               )}
               {term === 3 && avg2 > 0 && (
-                <span className="diapo-prevavg" style={tw.prevAvg}>{termLabel(2)}&nbsp;: {avg2.toFixed(2)}</span>
+                <span className="diapo-prevavg" style={tw.prevAvg}>{termLabel(2)}&nbsp;: {formatScore(avg2)}</span>
               )}
               <span className="diapo-curravg" style={tw.currAvg(avg >= 10)}>
-                {avg > 0 ? avg.toFixed(2) : '—'}<span className="diapo-avgunit" style={{ fontSize: '22px' }}>/20</span>
+                {avg > 0 ? formatScore(avg) : '—'}<span className="diapo-avgunit" style={{ fontSize: '22px' }}>/20</span>
               </span>
               {term === 2 && <TrendBadge prev={avg1} curr={avg} />}
               {term === 3 && <TrendBadge prev={avg2 > 0 ? avg2 : avg1} curr={avg} />}
@@ -405,27 +405,27 @@ export function CouncilDiapo({
               {brev.hasAnglais && (
                 <div className="diapo-brevline" style={tw.brevLine}>
                   <span style={{ color: '#1d4ed8', fontWeight: 'bold' }}>Anglais :</span>
-                  {term >= 2 && brev1.anglais > 0 && <span className="diapo-prevavg" style={{ ...tw.prevAvg, fontSize: '15px' }}>{termLabel(1)} : {brev1.anglais.toFixed(2)}</span>}
-                  {term === 3 && brev2.anglais > 0 && <span className="diapo-prevavg" style={{ ...tw.prevAvg, fontSize: '15px' }}>{termLabel(2)} : {brev2.anglais.toFixed(2)}</span>}
-                  <strong>{termLabel(term)} : {brev.anglais.toFixed(2)}</strong>
+                  {term >= 2 && brev1.anglais > 0 && <span className="diapo-prevavg" style={{ ...tw.prevAvg, fontSize: '15px' }}>{termLabel(1)} : {formatScore(brev1.anglais)}</span>}
+                  {term === 3 && brev2.anglais > 0 && <span className="diapo-prevavg" style={{ ...tw.prevAvg, fontSize: '15px' }}>{termLabel(2)} : {formatScore(brev2.anglais)}</span>}
+                  <strong>{termLabel(term)} : {formatScore(brev.anglais)}</strong>
                   <TrendBadge prev={term === 3 && brev2.anglais > 0 ? brev2.anglais : brev1.anglais} curr={brev.anglais} />
                 </div>
               )}
               {brev.hasEspagnol && (
                 <div className="diapo-brevline" style={tw.brevLine}>
                   <span style={{ color: '#1d4ed8', fontWeight: 'bold' }}>Espagnol :</span>
-                  {term >= 2 && brev1.espagnol > 0 && <span className="diapo-prevavg" style={{ ...tw.prevAvg, fontSize: '15px' }}>{termLabel(1)} : {brev1.espagnol.toFixed(2)}</span>}
-                  {term === 3 && brev2.espagnol > 0 && <span className="diapo-prevavg" style={{ ...tw.prevAvg, fontSize: '15px' }}>{termLabel(2)} : {brev2.espagnol.toFixed(2)}</span>}
-                  <strong>{termLabel(term)} : {brev.espagnol.toFixed(2)}</strong>
+                  {term >= 2 && brev1.espagnol > 0 && <span className="diapo-prevavg" style={{ ...tw.prevAvg, fontSize: '15px' }}>{termLabel(1)} : {formatScore(brev1.espagnol)}</span>}
+                  {term === 3 && brev2.espagnol > 0 && <span className="diapo-prevavg" style={{ ...tw.prevAvg, fontSize: '15px' }}>{termLabel(2)} : {formatScore(brev2.espagnol)}</span>}
+                  <strong>{termLabel(term)} : {formatScore(brev.espagnol)}</strong>
                   <TrendBadge prev={term === 3 && brev2.espagnol > 0 ? brev2.espagnol : brev1.espagnol} curr={brev.espagnol} />
                 </div>
               )}
               {brev.hasAllemand && (
                 <div className="diapo-brevline" style={tw.brevLine}>
                   <span style={{ color: '#1d4ed8', fontWeight: 'bold' }}>Allemand :</span>
-                  {term >= 2 && brev1.allemand > 0 && <span className="diapo-prevavg" style={{ ...tw.prevAvg, fontSize: '15px' }}>{termLabel(1)} : {brev1.allemand.toFixed(2)}</span>}
-                  {term === 3 && brev2.allemand > 0 && <span className="diapo-prevavg" style={{ ...tw.prevAvg, fontSize: '15px' }}>{termLabel(2)} : {brev2.allemand.toFixed(2)}</span>}
-                  <strong>{termLabel(term)} : {brev.allemand.toFixed(2)}</strong>
+                  {term >= 2 && brev1.allemand > 0 && <span className="diapo-prevavg" style={{ ...tw.prevAvg, fontSize: '15px' }}>{termLabel(1)} : {formatScore(brev1.allemand)}</span>}
+                  {term === 3 && brev2.allemand > 0 && <span className="diapo-prevavg" style={{ ...tw.prevAvg, fontSize: '15px' }}>{termLabel(2)} : {formatScore(brev2.allemand)}</span>}
+                  <strong>{termLabel(term)} : {formatScore(brev.allemand)}</strong>
                   <TrendBadge prev={term === 3 && brev2.allemand > 0 ? brev2.allemand : brev1.allemand} curr={brev.allemand} />
                 </div>
               )}
@@ -460,13 +460,10 @@ export function CouncilDiapo({
                         <div style={{ fontWeight: 'bold' }}>{subject.name}</div>
                         <div style={{ color: '#4f81be', fontSize: '9pt' }}>{subject.teacherName ?? ''}</div>
                       </td>
-                      <td className="diapo-tdc" style={tw.tdC}>{hasScore ? score!.toFixed(2) : '—'}</td>
-                      <td className="diapo-tdc" style={tw.tdC}>{cs?.avg > 0 ? cs.avg.toFixed(2) : '—'}</td>
-                      <td className="diapo-tdc" style={{ ...tw.tdC, color: subject.coefficient === 1 ? '#4f81be' : undefined }}>
-                        {subject.coefficient}
-                      </td>
-                      <td className="diapo-tdc" style={tw.tdC}>{cs?.min > 0 ? cs.min.toFixed(2) : '—'}</td>
-                      <td className="diapo-tdc" style={tw.tdC}>{cs?.max > 0 ? cs.max.toFixed(2) : '—'}</td>
+<td className="diapo-tdc" style={tw.tdC}>{hasScore ? formatScore(score!) : '—'}</td>
+                      <td className="diapo-tdc" style={tw.tdC}>{cs?.avg > 0 ? formatScore(cs.avg) : '—'}</td>
+                      <td className="diapo-tdc" style={tw.tdC}>{cs?.min > 0 ? formatScore(cs.min) : '—'}</td>
+                      <td className="diapo-tdc" style={tw.tdC}>{cs?.max > 0 ? formatScore(cs.max) : '—'}</td>
                       <td className="diapo-tdc" style={tw.tdC}>{hasScore ? getGradeLevel(score!) : '—'}</td>
                       <td className="diapo-td" style={tw.td}>{gradeRow?.comments ?? ''}</td>
                     </tr>
@@ -474,8 +471,8 @@ export function CouncilDiapo({
                 })}
                 <tr style={{ background: '#f3f4f6' }}>
                   <td className="diapo-td" style={{ ...tw.td, fontWeight: 'bold' }}>MOYENNE — {termLabel(term)}</td>
-                  <td className="diapo-tdc" style={{ ...tw.tdC, fontWeight: 'bold' }}>{avg > 0 ? avg.toFixed(2) : '—'}</td>
-                  <td className="diapo-tdc" style={{ ...tw.tdC, fontWeight: 'bold' }}>{classAvg > 0 ? classAvg.toFixed(2) : '—'}</td>
+                  <td className="diapo-tdc" style={{ ...tw.tdC, fontWeight: 'bold' }}>{avg > 0 ? formatScore(avg) : '—'}</td>
+                  <td className="diapo-tdc" style={{ ...tw.tdC, fontWeight: 'bold' }}>{classAvg > 0 ? formatScore(classAvg) : '—'}</td>
                   <td className="diapo-tdc" style={tw.tdC} colSpan={5}></td>
                 </tr>
               </tbody>
