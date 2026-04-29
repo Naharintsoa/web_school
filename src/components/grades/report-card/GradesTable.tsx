@@ -1,6 +1,7 @@
 import React from 'react';
 import type { Grade } from '../../../types';
-import './print.css'; // Importation des styles pour l'impression
+import './print.css';
+import { formatScore } from '../../../utils/grades';
 
 interface GradesTableProps {
   grades: Grade[];
@@ -14,10 +15,8 @@ export function GradesTable({ grades, classAverage, absences, delays }: GradesTa
 
   return (
     <div>
-      {/* Bouton d'impression (non visible lors de l'impression) */}
       <button className="no-print" onClick={() => window.print()}>Imprimer</button>
 
-      {/* Tableau des notes */}
       <table className="grades-table">
         <thead>
           <tr>
@@ -46,8 +45,8 @@ export function GradesTable({ grades, classAverage, absences, delays }: GradesTa
 
           <tr className="average-row">
             <td><strong>MOYENNE TRIMESTRE</strong></td>
-            <td className="text-center"><strong>{studentAverage.toFixed(2)}</strong></td>
-            <td className="text-center"><strong>{classAverage.toFixed(2)}</strong></td>
+            <td className="text-center"><strong>{formatScore(studentAverage)}</strong></td>
+            <td className="text-center"><strong>{formatScore(classAverage)}</strong></td>
             <td colSpan={5} className="text-center"></td>
           </tr>
 
@@ -83,8 +82,8 @@ function GradeRow({ grade }: { grade: Grade }) {
         <strong>{grade.subjectName}</strong><br />
         {grade.teacherName}
       </td>
-      <td className="text-center">{grade.score.toFixed(2)}</td>
-      <td className="text-center">{grade.classAverage.toFixed(2)}</td>
+      <td className="text-center">{formatScore(grade.score)}</td>
+      <td className="text-center">{formatScore(grade.classAverage)}</td>
       <td className="text-center">{grade.coefficient}</td>
       <td className="text-center">{grade.minScore.toFixed(1)}</td>
       <td className="text-center">{grade.maxScore.toFixed(1)}</td>
@@ -101,5 +100,5 @@ function calculateStudentAverage(grades: Grade[]): number {
   const totalCoefficients = grades.reduce((sum, grade) => 
     sum + grade.coefficient, 0
   );
-  return totalWeightedScore / totalCoefficients;
+  return totalCoefficients > 0 ? totalWeightedScore / totalCoefficients : 0;
 }

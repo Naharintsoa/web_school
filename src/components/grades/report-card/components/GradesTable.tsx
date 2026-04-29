@@ -1,7 +1,7 @@
 import React from 'react';
 import type { Grade } from '../../../../types';
 import { getTeacherForSubject } from '../../../../utils/teachers';
-import { calculateAverage } from '../../../../utils/grades';
+import { calculateAverage, formatScore } from '../../../../utils/grades';
 
 interface GradesTableProps {
   grades: Grade[];
@@ -41,9 +41,9 @@ export function GradesTable({ grades, classAverage, term }: GradesTableProps) {
                 <div className="font-medium">{grade.subjectName}</div>
                 <div className="text-sm text-gray-500">{teacher?.name || 'Non assigné'}</div>
               </td>
-              <td className="text-center font-medium">{grade.score.toFixed(2)}</td>
+              <td className="text-center font-medium">{formatScore(grade.score)}</td>
               <td className="text-center">{grade.coefficient}</td>
-              <td className="text-center">{grade.classAverage.toFixed(2)}</td>
+              <td className="text-center">{formatScore(grade.classAverage)}</td>
               <td className="text-center">
                 <span className={`level-badge level-${level}`}>{level}</span>
               </td>
@@ -53,9 +53,9 @@ export function GradesTable({ grades, classAverage, term }: GradesTableProps) {
         })}
         <tr className="font-medium bg-gray-50">
           <td>MOYENNE TRIMESTRE {term}</td>
-          <td className="text-center">{studentAverage.toFixed(2)}</td>
+          <td className="text-center">{formatScore(studentAverage)}</td>
           <td></td>
-          <td className="text-center">{classAverage.toFixed(2)}</td>
+          <td className="text-center">{formatScore(classAverage)}</td>
           <td colSpan={2}></td>
         </tr>
       </tbody>
