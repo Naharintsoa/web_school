@@ -9,7 +9,7 @@ import type { Student } from '../../types/student';
 import type { Subject } from '../../types/subject';
 import type { Grade } from '../../types/grade';
 import { gradesApi } from '../../services/api';
-import { calculateAverage, calculateClassStats, getGradeLevel } from '../../utils/grades';
+import { calculateAverage, calculateClassStats, getGradeLevel, formatScore } from '../../utils/grades';
 import { CouncilDiapo } from './CouncilDiapo';
 import type { StudentSlide } from './CouncilDiapo';
 
@@ -49,7 +49,7 @@ function brevets(sg: Grade[]) {
 function Trend({ prev, curr }: { prev: number; curr: number }) {
   if (prev <= 0 || curr <= 0) return null;
   const diff = curr - prev;
-  const abs  = Math.abs(diff).toFixed(2);
+  const abs = formatScore(Math.abs(diff));
   if (diff > 0.05)  return <span className="trend up">   <TrendingUp  size={12} /> +{abs}</span>;
   if (diff < -0.05) return <span className="trend down"> <TrendingDown size={12} /> -{abs}</span>;
   return <span className="trend eq"><Minus size={12} /> ={abs}</span>;
@@ -405,13 +405,13 @@ export function ClassCouncilView({ grade, term, students, subjects, onClose }: C
                           <div style={{ fontWeight: 'bold' }}>{subject.name}</div>
                           <div style={{ color: '#4f81be', fontSize: '6.5pt' }}>{subject.teacherName ?? ''}</div>
                         </td>
-                        <td style={S.cellC}>{hasScore ? score!.toFixed(2) : '—'}</td>
-                        <td style={S.cellC}>{cs && cs.avg > 0 ? cs.avg.toFixed(2) : '—'}</td>
+                        <td style={S.cellC}>{hasScore ? formatScore(score!) : '—'}</td>
+                        <td style={S.cellC}>{cs && cs.avg > 0 ? formatScore(cs.avg) : '—'}</td>
                         <td style={{ ...S.cellC, color: subject.coefficient === 1 ? '#4f81be' : undefined }}>
                           {subject.coefficient}
                         </td>
-                        <td style={S.cellC}>{cs && cs.min > 0 ? cs.min.toFixed(2) : '—'}</td>
-                        <td style={S.cellC}>{cs && cs.max > 0 ? cs.max.toFixed(2) : '—'}</td>
+                        <td style={S.cellC}>{cs && cs.min > 0 ? formatScore(cs.min) : '—'}</td>
+                        <td style={S.cellC}>{cs && cs.max > 0 ? formatScore(cs.max) : '—'}</td>
                         <td style={S.cellC}>{hasScore ? getGradeLevel(score!) : '—'}</td>
                         <td style={S.cell}>{gradeRow?.comments ?? ''}</td>
                       </tr>
@@ -420,8 +420,8 @@ export function ClassCouncilView({ grade, term, students, subjects, onClose }: C
 
                   <tr style={{ background: '#f3f4f6' }}>
                     <td style={{ ...S.cell, fontWeight: 'bold' }}>MOYENNE — Trimestre {term}</td>
-                    <td style={{ ...S.cellC, fontWeight: 'bold' }}>{avg > 0 ? avg.toFixed(2) : '—'}</td>
-                    <td style={{ ...S.cellC, fontWeight: 'bold' }}>{classAvg > 0 ? classAvg.toFixed(2) : '—'}</td>
+                    <td style={{ ...S.cellC, fontWeight: 'bold' }}>{avg > 0 ? formatScore(avg) : '—'}</td>
+                    <td style={{ ...S.cellC, fontWeight: 'bold' }}>{classAvg > 0 ? formatScore(classAvg) : '—'}</td>
                     <td style={S.cellC} colSpan={5}></td>
                   </tr>
                   <tr>
