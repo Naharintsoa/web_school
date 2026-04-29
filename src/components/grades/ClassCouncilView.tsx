@@ -33,15 +33,32 @@ const S = {
 
 /** Calcule les moyennes Brevet pour un ensemble de notes */
 function brevets(sg: Grade[]) {
+  const BREVET_SUBJECTS = [
+    'francais', 'malagasy', 'anglais', 'espagnol', 'allemand',
+    'svt', 'histoire', 'geographie', 'physique', 'chimie', 'emc', 'mathematiques',
+  ];
+  const isBrevetSubject = (name: string) => BREVET_SUBJECTS.some(s => name.toLowerCase().includes(s));
+  
+  const brevAnglais = sg.filter(g => {
+    const n = g.subjectName?.toLowerCase() ?? '';
+    return isBrevetSubject(n) && !n.includes('espagnol') && !n.includes('allemand');
+  });
+  const brevEspagnol = sg.filter(g => {
+    const n = g.subjectName?.toLowerCase() ?? '';
+    return isBrevetSubject(n) && !n.includes('allemand');
+  });
+  const brevAllemand = sg.filter(g => {
+    const n = g.subjectName?.toLowerCase() ?? '';
+    return isBrevetSubject(n) && n.includes('allemand');
+  });
+  
   return {
-    hasAnglais:  sg.some(g => g.subjectName?.toLowerCase().includes('anglais')),
-    hasEspagnol: sg.some(g => g.subjectName?.toLowerCase().includes('espagnol')),
-    hasAllemand: sg.some(g => g.subjectName?.toLowerCase().includes('allemand')),
-    anglais:  calculateAverage(sg.filter(g =>
-      !g.subjectName?.toLowerCase().includes('espagnol') &&
-      !g.subjectName?.toLowerCase().includes('allemand'))),
-    espagnol: calculateAverage(sg.filter(g => !g.subjectName?.toLowerCase().includes('anglais'))),
-    allemand: calculateAverage(sg.filter(g => !g.subjectName?.toLowerCase().includes('anglais'))),
+    hasAnglais:  brevAnglais.length > 0,
+    hasEspagnol: brevEspagnol.length > 0,
+    hasAllemand: brevAllemand.length > 0,
+    anglais:  calculateAverage(brevAnglais),
+    espagnol: calculateAverage(brevEspagnol),
+    allemand: calculateAverage(brevAllemand),
   };
 }
 
