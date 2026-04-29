@@ -93,8 +93,8 @@ export function getMentionFromAverage(average: number): 'félicitations' | 'enco
 }
 
 /**
- * Formate un score pour l'affichage (4 décimales).
+ * Formate un score pour l'affichage (2 décimales).
  */
 export function formatScore(score: number): string {
-  return score.toFixed(4);
+  return score.toFixed(2);
 }
