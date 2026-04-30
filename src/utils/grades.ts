@@ -119,6 +119,10 @@ export function computeBrevetAverages(grades: Grade[]): BrevetAverages {
   ];
   const isBrevetSubject = (name: string) => BREVET_SUBJECTS.some(s => name.toLowerCase().includes(s));
 
+  const hasAnglais = grades.some(g => g.subjectName?.toLowerCase().includes('anglais'));
+  const hasEspagnol = grades.some(g => g.subjectName?.toLowerCase().includes('espagnol'));
+  const hasAllemand = grades.some(g => g.subjectName?.toLowerCase().includes('allemand'));
+
   const brevAnglais = grades.filter(g => {
     const n = g.subjectName?.toLowerCase() ?? '';
     return isBrevetSubject(n) && !n.includes('espagnol') && !n.includes('allemand');
@@ -133,9 +137,9 @@ export function computeBrevetAverages(grades: Grade[]): BrevetAverages {
   });
 
   return {
-    hasAnglais: brevAnglais.length > 0,
-    hasEspagnol: brevEspagnol.length > 0,
-    hasAllemand: brevAllemand.length > 0,
+    hasAnglais,
+    hasEspagnol,
+    hasAllemand,
     anglais: calculateAverage(brevAnglais),
     espagnol: calculateAverage(brevEspagnol),
     allemand: calculateAverage(brevAllemand),
