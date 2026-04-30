@@ -54,6 +54,7 @@ export function ClassGradesList({ grade, onBack }: ClassGradesListProps) {
   const [showCouncil, setShowCouncil] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [showMultiPrint, setShowMultiPrint] = useState(false);
+  const [multiPrintGrades, setMultiPrintGrades] = useState<Grade[]>([]);
   const [entryMode, setEntryMode] = useState<'student' | 'subject'>('student');
 
   // Professeur principal — chargé depuis la base, éditable
@@ -118,6 +119,13 @@ export function ClassGradesList({ grade, onBack }: ClassGradesListProps) {
   }, [grade, selectedTerm, currentYear, currentSchool]);
 
   const handleMultiPrint = async () => {
+    // Recharger les données fraîches depuis la base
+    const [allStudents, allGrades] = await Promise.all([
+      studentApi.getAll(currentYear, currentSchool),
+      gradesApi.getAll(),
+    ]);
+    const classIds = new Set(allStudents.filter(s => s.grade === grade).map(s => s.id));
+    setMultiPrintGrades(allGrades.filter(g => classIds.has(g.studentId)));
     setShowMultiPrint(true);
   };
 
@@ -203,8 +211,39 @@ export function ClassGradesList({ grade, onBack }: ClassGradesListProps) {
     s.lastName.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Vue Conseil de classe (plein écran, imprimable) — mêmes données que les bulletins
-  if (showCouncil) {
+  // Vue Conseil de classe (plein écran, imprimable) — rechargement forcé des données fraîches
+  const [councilData, setCouncilData] = useState<{
+    allGradesAllTerms: Grade[];
+    classAvg: number;
+    stats: Record<string, ClassSubjectStats>;
+  } | null>(null);
+
+  const openCouncil = async () => {
+    // Recharger TOUTES les données de la classe depuis la base (toujours frais)
+    const [allStudents, allGrades] = await Promise.all([
+      studentApi.getAll(currentYear, currentSchool),
+      gradesApi.getAll(),
+    ]);
+    const classIds = new Set(allStudents.filter(s => s.grade === grade).map(s => s.id));
+    // MÊME filtre que le bulletin : terme + matières actives uniquement
+    const freshTermGrades = allGrades.filter(g => classIds.has(g.studentId) && g.term === selectedTerm && activeSubjectIds.has(g.subjectId));
+    const freshAllTermsGrades = allGrades.filter(g => classIds.has(g.studentId) && activeSubjectIds.has(g.subjectId));
+
+    // Recalculer les stats avec les données fraîches (mêmes calculs que le bulletin)
+    const stats: Record<string, ClassSubjectStats> = {};
+    for (const subject of subjects) {
+      const sg = freshTermGrades.filter(g => g.subjectId === subject.id);
+      stats[subject.id] = calculateClassStats(sg);
+    }
+    setCouncilData({
+      allGradesAllTerms: freshAllTermsGrades,
+      classAvg: calculateAverage(freshTermGrades),
+      stats,
+    });
+    setShowCouncil(true);
+  };
+
+  if (showCouncil && councilData) {
     return (
       <ClassCouncilView
         grade={grade}
@@ -212,9 +251,10 @@ export function ClassGradesList({ grade, onBack }: ClassGradesListProps) {
         students={students}
         subjects={subjects}
         onClose={() => setShowCouncil(false)}
-        allClassGradesAllTerms={allClassGradesAllTerms}
-        classAverage={calculateAverage(allClassGrades)}
-        classStats={getClassStats()}
+        allClassGradesAllTerms={councilData.allGradesAllTerms}
+        classAverage={councilData.classAvg}
+        classStats={councilData.stats}
+        activeSubjectIds={activeSubjectIds}
       />
     );
   }
@@ -370,7 +410,7 @@ export function ClassGradesList({ grade, onBack }: ClassGradesListProps) {
               <span className="hidden sm:inline">Bulletins multiples</span>
             </button>
             <button
-              onClick={() => setShowCouncil(true)}
+              onClick={openCouncil}
               className="flex items-center gap-2 px-3 py-2 text-sm text-emerald-700 border border-emerald-300 rounded-lg hover:bg-emerald-50"
             >
               <Users size={16} />

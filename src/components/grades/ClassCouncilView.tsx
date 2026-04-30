@@ -26,6 +26,8 @@ interface ClassCouncilViewProps {
   classAverage: number;
   /** Stats de classe déjà calculées (mêmes données que les bulletins) */
   classStats: Record<string, ClassSubjectStats>;
+  /** IDs des matières actives — MÊME filtre que le bulletin */
+  activeSubjectIds: Set<string>;
 }
 
 const LANG_KEYWORDS = ['anglais', 'espagnol', 'allemand'];
@@ -49,15 +51,15 @@ function Trend({ prev, curr }: { prev: number; curr: number }) {
   return <span className="trend eq"><Minus size={12} /> ={abs}</span>;
 }
 
-export function ClassCouncilView({ grade, term, students, subjects, onClose, allClassGradesAllTerms, classAverage, classStats }: ClassCouncilViewProps) {
+export function ClassCouncilView({ grade, term, students, subjects, onClose, allClassGradesAllTerms, classAverage, classStats, activeSubjectIds }: ClassCouncilViewProps) {
   const allGrades = allClassGradesAllTerms;
   const [showDiapo, setShowDiapo] = useState(false);
   const [liveSessionId, setLiveSessionId] = useState<string | null>(null);
   const [joinUrl, setJoinUrl] = useState('');
 
   const openDiapo = async () => {
-    // Utiliser les mêmes données que les bulletins
-    const gradesByTerm = (t: 1 | 2 | 3) => allGrades.filter(g => g.term === t);
+    // MÊME filtre que le bulletin : termes + matières actives
+    const gradesByTerm = (t: 1 | 2 | 3) => allGrades.filter(g => g.term === t && activeSubjectIds.has(g.subjectId));
     const currentTermGrades = gradesByTerm(term);
     const csLocal = classStats;
     const caLocal = classAverage;
@@ -135,8 +137,9 @@ export function ClassCouncilView({ grade, term, students, subjects, onClose, all
     setShowDiapo(false);
   };
 
-  // Notes filtrées par trimestre (mêmes données que les bulletins)
-  const gradesByTerm = (t: 1 | 2 | 3) => allGrades.filter(g => g.term === t);
+  // Notes filtrées par trimestre ET par matières actives (MÊME calcul que le bulletin)
+  const activeGrades = allGrades.filter(g => activeSubjectIds.has(g.subjectId));
+  const gradesByTerm = (t: 1 | 2 | 3) => activeGrades.filter(g => g.term === t);
   const currentTermGrades = gradesByTerm(term);
 
   const csLocal = classStats;
