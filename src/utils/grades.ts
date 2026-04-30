@@ -98,3 +98,46 @@ export function getMentionFromAverage(average: number): 'félicitations' | 'enco
 export function formatScore(score: number): string {
   return score.toFixed(2);
 }
+
+/**
+ * Calcule les moyennes Brevet de manière cohérente.
+ * Utilisé par les bulletins, le conseil de classe et le diaporama.
+ */
+export interface BrevetAverages {
+  hasAnglais: boolean;
+  hasEspagnol: boolean;
+  hasAllemand: boolean;
+  anglais: number;
+  espagnol: number;
+  allemand: number;
+}
+
+export function computeBrevetAverages(grades: Grade[]): BrevetAverages {
+  const BREVET_SUBJECTS = [
+    'francais', 'malagasy', 'anglais', 'espagnol', 'allemand',
+    'svt', 'histoire', 'geographie', 'physique', 'chimie', 'emc', 'mathematiques',
+  ];
+  const isBrevetSubject = (name: string) => BREVET_SUBJECTS.some(s => name.toLowerCase().includes(s));
+
+  const brevAnglais = grades.filter(g => {
+    const n = g.subjectName?.toLowerCase() ?? '';
+    return isBrevetSubject(n) && !n.includes('espagnol') && !n.includes('allemand');
+  });
+  const brevEspagnol = grades.filter(g => {
+    const n = g.subjectName?.toLowerCase() ?? '';
+    return isBrevetSubject(n) && !n.includes('allemand');
+  });
+  const brevAllemand = grades.filter(g => {
+    const n = g.subjectName?.toLowerCase() ?? '';
+    return isBrevetSubject(n) && n.includes('allemand');
+  });
+
+  return {
+    hasAnglais: brevAnglais.length > 0,
+    hasEspagnol: brevEspagnol.length > 0,
+    hasAllemand: brevAllemand.length > 0,
+    anglais: calculateAverage(brevAnglais),
+    espagnol: calculateAverage(brevEspagnol),
+    allemand: calculateAverage(brevAllemand),
+  };
+}

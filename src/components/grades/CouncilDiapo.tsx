@@ -460,8 +460,9 @@ export function CouncilDiapo({
                         <div style={{ fontWeight: 'bold' }}>{subject.name}</div>
                         <div style={{ color: '#4f81be', fontSize: '9pt' }}>{subject.teacherName ?? ''}</div>
                       </td>
-<td className="diapo-tdc" style={tw.tdC}>{hasScore ? formatScore(score!) : '—'}</td>
+                      <td className="diapo-tdc" style={tw.tdC}>{hasScore ? formatScore(score!) : '—'}</td>
                       <td className="diapo-tdc" style={tw.tdC}>{cs?.avg > 0 ? formatScore(cs.avg) : '—'}</td>
+                      <td className="diapo-tdc" style={tw.tdC}>{subject.coefficient}</td>
                       <td className="diapo-tdc" style={tw.tdC}>{cs?.min > 0 ? formatScore(cs.min) : '—'}</td>
                       <td className="diapo-tdc" style={tw.tdC}>{cs?.max > 0 ? formatScore(cs.max) : '—'}</td>
                       <td className="diapo-tdc" style={tw.tdC}>{hasScore ? getGradeLevel(score!) : '—'}</td>

@@ -5,7 +5,7 @@
 import type { Student } from '../../../types/student';
 import type { Grade } from '../../../types/grade';
 import type { Subject } from '../../../types/subject';
-import { calculateAverage, getGradeLevel, formatScore } from '../../../utils/grades';
+import { calculateAverage, getGradeLevel, formatScore, computeBrevetAverages } from '../../../utils/grades';
 
 interface ClassSubjectStats { avg: number; min: number; max: number; }
 interface OtherTermAverage { term: 1 | 2 | 3; average: number; }
@@ -70,15 +70,13 @@ export function BulletinPrintContent({
   const notedCount = grades.length;
 
   const isBrevet = /^[34]/.test(student.grade?.trim() ?? '');
-  const hasAnglais  = grades.some(g => g.subjectName?.toLowerCase().includes('anglais'));
-  const hasEspagnol = grades.some(g => g.subjectName?.toLowerCase().includes('espagnol'));
-  const hasAllemand = grades.some(g => g.subjectName?.toLowerCase().includes('allemand'));
-
-  const moyBrevAnglais  = calculateAverage(grades.filter(g =>
-    !g.subjectName?.toLowerCase().includes('espagnol') && !g.subjectName?.toLowerCase().includes('allemand')
-  ));
-  const moyBrevEspagnol = calculateAverage(grades.filter(g => !g.subjectName?.toLowerCase().includes('anglais')));
-  const moyBrevAllemand = calculateAverage(grades.filter(g => !g.subjectName?.toLowerCase().includes('anglais')));
+  const brev = isBrevet ? computeBrevetAverages(grades) : null;
+  const hasAnglais  = brev?.hasAnglais ?? false;
+  const hasEspagnol = brev?.hasEspagnol ?? false;
+  const hasAllemand = brev?.hasAllemand ?? false;
+  const moyBrevAnglais  = brev?.anglais ?? 0;
+  const moyBrevEspagnol = brev?.espagnol ?? 0;
+  const moyBrevAllemand = brev?.allemand ?? 0;
 
   return (
     <div style={{ padding: '15px', fontFamily: 'Arial, sans-serif', fontSize: '9pt', background: '#fff', width: '210mm', boxSizing: 'border-box' }}>

@@ -2,16 +2,17 @@
  * Conseil de classe — classement des élèves par ordre de mérite (moyenne décroissante).
  * T2 : compare avec T1. T3 : compare avec T1 et T2.
  */
-import { useState, useEffect } from 'react';
-import { ArrowLeft, Printer, Loader2, TrendingUp, TrendingDown, Minus, MonitorPlay } from 'lucide-react';
+import { useState } from 'react';
+import { ArrowLeft, Printer, TrendingUp, TrendingDown, Minus, MonitorPlay } from 'lucide-react';
 import { getSocket, disconnectSocket } from '../../services/councilSocket';
 import type { Student } from '../../types/student';
 import type { Subject } from '../../types/subject';
 import type { Grade } from '../../types/grade';
-import { gradesApi } from '../../services/api';
-import { calculateAverage, calculateClassStats, getGradeLevel, formatScore } from '../../utils/grades';
+import { calculateAverage, getGradeLevel, formatScore, computeBrevetAverages } from '../../utils/grades';
 import { CouncilDiapo } from './CouncilDiapo';
 import type { StudentSlide } from './CouncilDiapo';
+
+interface ClassSubjectStats { avg: number; min: number; max: number; }
 
 interface ClassCouncilViewProps {
   grade: string;
@@ -19,6 +20,12 @@ interface ClassCouncilViewProps {
   students: Student[];
   subjects: Subject[];
   onClose: () => void;
+  /** Toutes les notes de la classe, TOUS trimestres confondus (mêmes données que les bulletins) */
+  allClassGradesAllTerms: Grade[];
+  /** Moyenne de classe déjà calculée (mêmes données que les bulletins) */
+  classAverage: number;
+  /** Stats de classe déjà calculées (mêmes données que les bulletins) */
+  classStats: Record<string, ClassSubjectStats>;
 }
 
 const LANG_KEYWORDS = ['anglais', 'espagnol', 'allemand'];
@@ -31,36 +38,6 @@ const S = {
   header: { padding: '3px', border: '1px solid #000', background: '#d9d9d9', fontWeight: 'bold' as const, textAlign: 'center' as const, fontSize: '8pt', verticalAlign: 'bottom' as const },
 };
 
-/** Calcule les moyennes Brevet pour un ensemble de notes */
-function brevets(sg: Grade[]) {
-  const BREVET_SUBJECTS = [
-    'francais', 'malagasy', 'anglais', 'espagnol', 'allemand',
-    'svt', 'histoire', 'geographie', 'physique', 'chimie', 'emc', 'mathematiques',
-  ];
-  const isBrevetSubject = (name: string) => BREVET_SUBJECTS.some(s => name.toLowerCase().includes(s));
-  
-  const brevAnglais = sg.filter(g => {
-    const n = g.subjectName?.toLowerCase() ?? '';
-    return isBrevetSubject(n) && !n.includes('espagnol') && !n.includes('allemand');
-  });
-  const brevEspagnol = sg.filter(g => {
-    const n = g.subjectName?.toLowerCase() ?? '';
-    return isBrevetSubject(n) && !n.includes('allemand');
-  });
-  const brevAllemand = sg.filter(g => {
-    const n = g.subjectName?.toLowerCase() ?? '';
-    return isBrevetSubject(n) && n.includes('allemand');
-  });
-  
-  return {
-    hasAnglais:  brevAnglais.length > 0,
-    hasEspagnol: brevEspagnol.length > 0,
-    hasAllemand: brevAllemand.length > 0,
-    anglais:  calculateAverage(brevAnglais),
-    espagnol: calculateAverage(brevEspagnol),
-    allemand: calculateAverage(brevAllemand),
-  };
-}
 
 /** Flèche de tendance entre deux valeurs */
 function Trend({ prev, curr }: { prev: number; curr: number }) {
@@ -72,31 +49,18 @@ function Trend({ prev, curr }: { prev: number; curr: number }) {
   return <span className="trend eq"><Minus size={12} /> ={abs}</span>;
 }
 
-export function ClassCouncilView({ grade, term, students, subjects, onClose }: ClassCouncilViewProps) {
-  // Toutes les notes de la classe, TOUS trimestres confondus
-  const [allGrades, setAllGrades] = useState<Grade[]>([]);
-  const [loading, setLoading] = useState(true);
+export function ClassCouncilView({ grade, term, students, subjects, onClose, allClassGradesAllTerms, classAverage, classStats }: ClassCouncilViewProps) {
+  const allGrades = allClassGradesAllTerms;
   const [showDiapo, setShowDiapo] = useState(false);
   const [liveSessionId, setLiveSessionId] = useState<string | null>(null);
   const [joinUrl, setJoinUrl] = useState('');
 
-  useEffect(() => {
-    const studentIds = new Set(students.map(s => s.id));
-    gradesApi.getAll().then(grades => {
-      setAllGrades(grades.filter(g => studentIds.has(g.studentId)));
-      setLoading(false);
-    });
-  }, [students]);
-
   const openDiapo = async () => {
-    // Construire les données du diaporama
+    // Utiliser les mêmes données que les bulletins
     const gradesByTerm = (t: 1 | 2 | 3) => allGrades.filter(g => g.term === t);
     const currentTermGrades = gradesByTerm(term);
-    const csLocal: Record<string, { avg: number; min: number; max: number }> = {};
-    for (const subject of subjects) {
-      csLocal[subject.id] = calculateClassStats(currentTermGrades.filter(g => g.subjectId === subject.id));
-    }
-    const caLocal = calculateAverage(currentTermGrades);
+    const csLocal = classStats;
+    const caLocal = classAverage;
     const isBrevet = /^[34]/.test(grade.trim());
 
     const ranked = students
@@ -111,9 +75,9 @@ export function ClassCouncilView({ grade, term, students, subjects, onClose }: C
       avg1: calculateAverage(r.sg1),
       avg2: calculateAverage(r.sg2),
       sg: r.sg,
-      brev:  brevets(r.sg),
-      brev1: brevets(r.sg1),
-      brev2: brevets(r.sg2),
+      brev:  computeBrevetAverages(r.sg),
+      brev1: computeBrevetAverages(r.sg1),
+      brev2: computeBrevetAverages(r.sg2),
     }));
 
     try {
@@ -171,27 +135,12 @@ export function ClassCouncilView({ grade, term, students, subjects, onClose }: C
     setShowDiapo(false);
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-24 text-gray-400">
-        <Loader2 size={28} className="animate-spin mr-3" />
-        <span>Chargement des notes…</span>
-      </div>
-    );
-  }
-
-  // Notes filtrées par trimestre
+  // Notes filtrées par trimestre (mêmes données que les bulletins)
   const gradesByTerm = (t: 1 | 2 | 3) => allGrades.filter(g => g.term === t);
   const currentTermGrades = gradesByTerm(term);
 
-  // Stats de classe (trimestre courant) pour le mini-bulletin
-  const classStats: Record<string, { avg: number; min: number; max: number }> = {};
-  for (const subject of subjects) {
-    classStats[subject.id] = calculateClassStats(
-      currentTermGrades.filter(g => g.subjectId === subject.id)
-    );
-  }
-  const classAvg = calculateAverage(currentTermGrades);
+  const csLocal = classStats;
+  const caLocal = classAverage;
 
   const isBrevet = /^[34]/.test(grade.trim());
   const medalColor = (i: number) => ['#f59e0b', '#94a3b8', '#b45309'][i] ?? '#6366f1';
@@ -217,9 +166,9 @@ export function ClassCouncilView({ grade, term, students, subjects, onClose }: C
     avg1: calculateAverage(r.sg1),
     avg2: calculateAverage(r.sg2),
     sg: r.sg,
-    brev:  brevets(r.sg),
-    brev1: brevets(r.sg1),
-    brev2: brevets(r.sg2),
+    brev:  computeBrevetAverages(r.sg),
+    brev1: computeBrevetAverages(r.sg1),
+    brev2: computeBrevetAverages(r.sg2),
   }));
 
   if (showDiapo) {
@@ -229,8 +178,8 @@ export function ClassCouncilView({ grade, term, students, subjects, onClose }: C
         term={term}
         grade={grade}
         subjects={subjects}
-        classStats={classStats}
-        classAvg={classAvg}
+        classStats={csLocal}
+        classAvg={caLocal}
         isBrevet={isBrevet}
         onClose={closeDiapo}
         onNavigate={idx => liveSessionId && getSocket().emit('set-student', { sessionId: liveSessionId, index: idx })}
@@ -284,9 +233,9 @@ export function ClassCouncilView({ grade, term, students, subjects, onClose }: C
         {ranked.map(({ student, sg, sg1, sg2, avg }, index) => {
           const avg1 = calculateAverage(sg1);
           const avg2 = calculateAverage(sg2);
-          const brev  = brevets(sg);
-          const brev1 = brevets(sg1);
-          const brev2 = brevets(sg2);
+          const brev  = computeBrevetAverages(sg);
+          const brev1 = computeBrevetAverages(sg1);
+          const brev2 = computeBrevetAverages(sg2);
 
           const displayRows = subjects
             .filter(s => isLang(s.name) ? sg.some(g => g.subjectId === s.id) : true)
@@ -413,7 +362,7 @@ export function ClassCouncilView({ grade, term, students, subjects, onClose }: C
                 </thead>
                 <tbody>
                   {displayRows.map(({ subject, gradeRow }) => {
-                    const cs = classStats[subject.id];
+                    const cs = csLocal[subject.id];
                     const score = gradeRow?.score;
                     const hasScore = score !== undefined && score !== null && !isNaN(score);
                     return (
@@ -438,7 +387,7 @@ export function ClassCouncilView({ grade, term, students, subjects, onClose }: C
                   <tr style={{ background: '#f3f4f6' }}>
                     <td style={{ ...S.cell, fontWeight: 'bold' }}>MOYENNE — Trimestre {term}</td>
                     <td style={{ ...S.cellC, fontWeight: 'bold' }}>{avg > 0 ? formatScore(avg) : '—'}</td>
-                    <td style={{ ...S.cellC, fontWeight: 'bold' }}>{classAvg > 0 ? formatScore(classAvg) : '—'}</td>
+                    <td style={{ ...S.cellC, fontWeight: 'bold' }}>{caLocal > 0 ? formatScore(caLocal) : '—'}</td>
                     <td style={S.cellC} colSpan={5}></td>
                   </tr>
                   <tr>

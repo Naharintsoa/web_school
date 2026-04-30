@@ -48,12 +48,12 @@ export function ClassGradesList({ grade, onBack }: ClassGradesListProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [grades, setGrades] = useState<Grade[]>([]);
   const [allClassGrades, setAllClassGrades] = useState<Grade[]>([]);
+  const [allClassGradesAllTerms, setAllClassGradesAllTerms] = useState<Grade[]>([]);
   const [showReportCard, setShowReportCard] = useState(false);
   const [showSubjectManager, setShowSubjectManager] = useState(false);
   const [showCouncil, setShowCouncil] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [showMultiPrint, setShowMultiPrint] = useState(false);
-  const [multiPrintGrades, setMultiPrintGrades] = useState<Grade[]>([]);
   const [entryMode, setEntryMode] = useState<'student' | 'subject'>('student');
 
   // Professeur principal — chargé depuis la base, éditable
@@ -114,16 +114,10 @@ export function ClassGradesList({ grade, onBack }: ClassGradesListProps) {
     ]);
     const classIds = new Set(allStudents.filter(s => s.grade === grade).map(s => s.id));
     setAllClassGrades(allGrades.filter(g => classIds.has(g.studentId) && g.term === selectedTerm));
+    setAllClassGradesAllTerms(allGrades.filter(g => classIds.has(g.studentId)));
   }, [grade, selectedTerm, currentYear, currentSchool]);
 
   const handleMultiPrint = async () => {
-    // Charger toutes les notes de la classe (tous trimestres) pour le multi-print
-    const [allStudents, allGrades] = await Promise.all([
-      studentApi.getAll(currentYear, currentSchool),
-      gradesApi.getAll(),
-    ]);
-    const classIds = new Set(allStudents.filter(s => s.grade === grade).map(s => s.id));
-    setMultiPrintGrades(allGrades.filter(g => classIds.has(g.studentId)));
     setShowMultiPrint(true);
   };
 
@@ -209,7 +203,7 @@ export function ClassGradesList({ grade, onBack }: ClassGradesListProps) {
     s.lastName.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Vue Conseil de classe (plein écran, imprimable)
+  // Vue Conseil de classe (plein écran, imprimable) — mêmes données que les bulletins
   if (showCouncil) {
     return (
       <ClassCouncilView
@@ -218,6 +212,9 @@ export function ClassGradesList({ grade, onBack }: ClassGradesListProps) {
         students={students}
         subjects={subjects}
         onClose={() => setShowCouncil(false)}
+        allClassGradesAllTerms={allClassGradesAllTerms}
+        classAverage={calculateAverage(allClassGrades)}
+        classStats={getClassStats()}
       />
     );
   }
@@ -241,12 +238,12 @@ export function ClassGradesList({ grade, onBack }: ClassGradesListProps) {
     );
   }
 
-  // Impression multiple (portal — déclenche window.print())
+  // Impression multiple — mêmes données que les bulletins
   if (showMultiPrint) {
     return (
       <BulletinMultiPrint
         students={students}
-        allGrades={multiPrintGrades}
+        allGrades={allClassGradesAllTerms}
         subjects={subjects}
         term={selectedTerm}
         schoolYear={currentYear}
