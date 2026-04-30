@@ -259,18 +259,55 @@ export function ClassGradesList({ grade, onBack }: ClassGradesListProps) {
     );
   }
 
-  // Vue bulletin (plein écran, prête à imprimer)
-  if (showReportCard && selectedStudent) {
+  // Vue bulletin (plein écran, prête à imprimer) — rechargement forcé des données fraîches
+  const [reportCardData, setReportCardData] = useState<{
+    studentGrades: Grade[];
+    allGradesAllTerms: Grade[];
+    classAvg: number;
+    stats: Record<string, ClassSubjectStats>;
+  } | null>(null);
+
+  const openReportCard = async () => {
+    // Recharger les données fraîches depuis la base (comme le conseil de classe)
+    const [allStudents, allGrades] = await Promise.all([
+      studentApi.getAll(currentYear, currentSchool),
+      gradesApi.getAll(),
+    ]);
+    const classIds = new Set(allStudents.filter(s => s.grade === grade).map(s => s.id));
+    const freshAllTermsGrades = allGrades.filter(g => classIds.has(g.studentId) && activeSubjectIds.has(g.subjectId));
+    const freshTermGrades = freshAllTermsGrades.filter(g => g.term === selectedTerm);
+
+    // Recalculer les stats avec les données fraîches
+    const stats: Record<string, ClassSubjectStats> = {};
+    for (const subject of subjects) {
+      const sg = freshTermGrades.filter(g => g.subjectId === subject.id);
+      stats[subject.id] = calculateClassStats(sg);
+    }
+
+    // Notes de l'élève sélectionné pour le trimestre courant
+    const studentGradesData = await gradesApi.getByStudent(selectedStudent!.id);
+    const studentTermGrades = studentGradesData.filter(g => g.term === selectedTerm && activeSubjectIds.has(g.subjectId));
+
+    setReportCardData({
+      studentGrades: studentTermGrades,
+      allGradesAllTerms: freshAllTermsGrades,
+      classAvg: calculateAverage(freshTermGrades),
+      stats,
+    });
+    setShowReportCard(true);
+  };
+
+  if (showReportCard && selectedStudent && reportCardData) {
     return (
       <ReportCard
         student={selectedStudent}
-        grades={currentTermGrades}
-        allGrades={grades}
+        grades={reportCardData.studentGrades}
+        allGrades={reportCardData.allGradesAllTerms}
         subjects={subjects}
-        classStats={getClassStats()}
+        classStats={reportCardData.stats}
         term={selectedTerm}
         schoolYear={currentYear}
-        classAverage={calculateAverage(allClassGrades)}
+        classAverage={reportCardData.classAvg}
         teacherName={principalTeacher}
         otherTermsAverages={otherTermsAverages}
         onClose={() => setShowReportCard(false)}
@@ -418,7 +455,7 @@ export function ClassGradesList({ grade, onBack }: ClassGradesListProps) {
             </button>
             {selectedStudent && entryMode === 'student' && (
               <button
-                onClick={() => setShowReportCard(true)}
+                onClick={openReportCard}
                 className="flex items-center gap-2 px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
               >
                 <Printer size={16} />
