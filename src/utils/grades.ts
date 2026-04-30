@@ -28,28 +28,6 @@ export function calculateAverage(grades: Grade[]): number {
 }
 
 /**
- * Calcule la moyenne de classe en tenant compte des matières optionnelles.
- * C'est la moyenne des moyennes individuelles de chaque élève.
- */
-export function calculateClassAverage(
-  allGrades: Grade[],
-  studentIds: string[],
-  activeSubjectIds: Set<string>,
-): number {
-  const filteredGrades = allGrades.filter(g => activeSubjectIds.has(g.subjectId));
-  const studentAvgs: number[] = [];
-
-  for (const sid of studentIds) {
-    const sg = filteredGrades.filter(g => g.studentId === sid);
-    const avg = calculateAverage(sg);
-    if (avg > 0) studentAvgs.push(avg);
-  }
-
-  if (studentAvgs.length === 0) return 0;
-  return studentAvgs.reduce((a, b) => a + b, 0) / studentAvgs.length;
-}
-
-/**
  * Calcule les statistiques d'une classe pour une matière donnée.
  * Retourne moyenne, note minimale et maximale.
  *

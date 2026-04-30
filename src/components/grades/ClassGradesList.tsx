@@ -22,7 +22,7 @@ import { studentApi, gradesApi } from '../../services/api';
 import { subjectsApi } from '../../services/api/subjectsApi';
 import { mockTeachers } from '../../data/mockTeachers';
 import { classTeachersApi } from '../../services/api/classTeachersApi';
-import { calculateAverage, calculateClassStats, calculateClassAverage } from '../../utils/grades';
+import { calculateAverage, calculateClassStats } from '../../utils/grades';
 import type { Student, Subject } from '../../types';
 import type { Grade } from '../../types/grade';
 
@@ -235,11 +235,9 @@ export function ClassGradesList({ grade, onBack }: ClassGradesListProps) {
       const sg = freshTermGrades.filter(g => g.subjectId === subject.id);
       stats[subject.id] = calculateClassStats(sg);
     }
-    const studentIds = students.map(s => s.id);
-
     setCouncilData({
       allGradesAllTerms: freshAllTermsGrades,
-      classAvg: calculateClassAverage(freshTermGrades, studentIds, activeSubjectIds),
+      classAvg: calculateAverage(freshTermGrades),
       stats,
     });
     setShowCouncil(true);
@@ -290,12 +288,10 @@ export function ClassGradesList({ grade, onBack }: ClassGradesListProps) {
     const studentGradesData = await gradesApi.getByStudent(selectedStudent!.id);
     const studentTermGrades = studentGradesData.filter(g => g.term === selectedTerm && activeSubjectIds.has(g.subjectId));
 
-    const studentIds = students.map(s => s.id);
-
     setReportCardData({
       studentGrades: studentTermGrades,
       allGradesAllTerms: freshAllTermsGrades,
-      classAvg: calculateClassAverage(freshTermGrades, studentIds, activeSubjectIds),
+      classAvg: calculateAverage(freshTermGrades),
       stats,
     });
     setShowReportCard(true);
@@ -330,7 +326,7 @@ export function ClassGradesList({ grade, onBack }: ClassGradesListProps) {
         schoolYear={currentYear}
         teacherName={principalTeacher}
         classStats={getClassStats()}
-        classAverage={calculateClassAverage(allClassGrades, students.map(s => s.id), activeSubjectIds)}
+        classAverage={calculateAverage(allClassGrades)}
         onDone={() => setShowMultiPrint(false)}
       />
     );
